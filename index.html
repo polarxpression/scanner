@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Barcode Buddy</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- HTML5-QRCode Library -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Google Fonts: Nunito for that rounded, friendly look -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: #1a1a1a; /* Deep charcoal */
+            color: #f3f4f6;
+            overscroll-behavior-y: none;
+        }
+
+        /* Hide scrollbar for cleaner look */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1a1a1a; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #444; 
+            border-radius: 10px;
+        }
+
+        #reader {
+            width: 100%;
+            border-radius: 1.5rem; /* rounded-3xl */
+            overflow: hidden;
+            background: #000;
+            box-shadow: inset 0 0 0 2px rgba(255,255,255,0.1); /* Inner rim */
+        }
+        #reader video {
+            object-fit: cover;
+            border-radius: 1.5rem;
+        }
+        
+        #reader__scan_region {
+            background: rgba(0,0,0,0.2);
+        }
+        
+        #reader__dashboard_section_csr span, 
+        #reader__dashboard_section_swaplink {
+            display: none !important;
+        }
+
+        .scan-flash {
+            animation: flashAnimation 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes flashAnimation {
+            0% { background-color: rgba(236, 72, 153, 0.6); } /* Pink-500 flash */
+            100% { background-color: transparent; }
+        }
+
+        /* Glassmorphism utilities */
+        .glass-panel {
+            background: rgba(40, 40, 40, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        /* Error Dialog Specific Styling */
+        .error-dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(5px);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center; /* Corrected to center */
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col relative overflow-hidden selection:bg-pink-500 selection:text-white">
+
+    <!-- Error Dialog Overlay (Debugging Tool) -->
+    <div id="error-dialog-overlay" class="error-dialog hidden">
+        <div class="bg-gray-800 p-6 m-4 max-w-sm w-full rounded-3xl shadow-2xl border-2 border-red-500/50 transform transition-all duration-300 scale-95" id="error-dialog-content">
+            <div class="flex items-center mb-4">
+                <i class="fa-solid fa-bug text-3xl text-red-500 mr-3"></i>
+                <h3 class="text-xl font-extrabold text-red-400" id="error-dialog-title">Debugging Alert</h3>
+            </div>
+            <p class="text-gray-300 text-sm mb-6" id="error-dialog-message">An unexpected issue occurred. Check console for details.</p>
+            <button onclick="document.getElementById('error-dialog-overlay').classList.add('hidden')" 
+                    class="w-full bg-red-500 hover:bg-red-400 text-white py-3 rounded-xl font-bold transition">
+                I Understand
+            </button>
+        </div>
+    </div>
+
+    <!-- Lists Overlay (Modal) -->
+    <div id="lists-overlay" class="absolute inset-0 z-50 hidden flex flex-col p-6 transition-all duration-300 backdrop-blur-xl bg-black/80">
+        <div class="flex justify-between items-center mb-8">
+            <h2 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500">My Collections</h2>
+            <button onclick="toggleListsMenu()" class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+
+        <!-- Create New List -->
+        <div class="bg-gray-900 p-2 rounded-full border border-gray-700 flex items-center mb-6 shadow-lg">
+            <input type="text" id="new-list-name" placeholder="Name your new list..." 
+                   class="flex-1 bg-transparent border-none text-white px-4 py-2 focus:outline-none placeholder-gray-500 font-semibold">
+            <button onclick="createNewList()" class="bg-pink-500 hover:bg-pink-400 text-white w-10 h-10 rounded-full flex items-center justify-center transition shadow-lg shadow-pink-500/30">
+                <i class="fa-solid fa-plus"></i>
+            </button>
+        </div>
+
+        <!-- Lists Container -->
+        <div id="lists-container" class="flex-1 overflow-y-auto space-y-3 pr-2">
+            <!-- Injected via JS -->
+        </div>
+    </div>
+
+    <!-- Header (Floating Pill) -->
+    <div class="px-4 pt-4 pb-2 z-20">
+        <header class="glass-panel rounded-3xl p-3 px-5 shadow-2xl flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-pink-400 to-purple-600 flex items-center justify-center shadow-lg shadow-pink-500/20">
+                    <i class="fa-solid fa-barcode text-white text-xs"></i>
+                </div>
+                <h1 class="text-lg font-bold tracking-tight">Scanner<span class="text-pink-400">Buddy</span></h1>
+            </div>
+            
+            <button onclick="toggleListsMenu()" class="bg-gray-800 hover:bg-gray-700 text-gray-200 px-4 py-2 rounded-full text-xs font-bold transition flex items-center gap-2 border border-gray-700">
+                <i class="fa-solid fa-layer-group"></i> Lists
+            </button>
+        </header>
+    </div>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto p-4 space-y-5">
+        
+        <!-- Status / Current List Card -->
+        <div class="flex justify-between items-center px-2">
+            <div>
+                <div class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Current List</div>
+                <div id="current-list-display" class="text-2xl font-extrabold text-white truncate max-w-[200px]">...</div>
+            </div>
+            <div class="bg-gray-800 px-4 py-2 rounded-full border border-gray-700 shadow-inner">
+                <span id="total-count" class="font-mono font-bold text-pink-400">0</span> <span class="text-xs text-gray-500 font-bold">ITEMS</span>
+            </div>
+        </div>
+
+        <!-- Scanner Area (Rounded & Chunky) -->
+        <div class="bg-[#222] p-3 rounded-[2rem] shadow-xl border border-gray-800 relative">
+            <div id="reader" class="min-h-[250px] relative"></div>
+            
+            <!-- Controls Overlay -->
+            <div class="absolute bottom-6 left-0 right-0 flex justify-center z-10 px-6 gap-4">
+                <button id="start-btn" onclick="startScanner()" class="flex-1 bg-pink-500 hover:bg-pink-400 text-white py-4 rounded-2xl font-extrabold text-sm transition shadow-lg shadow-pink-900/50 flex items-center justify-center gap-2 transform active:scale-95">
+                    <i class="fa-solid fa-camera"></i> SCAN
+                </button>
+                <button id="stop-btn" onclick="stopScanner()" class="hidden flex-1 bg-red-500 hover:bg-red-400 text-white py-4 rounded-2xl font-extrabold text-sm transition shadow-lg shadow-red-900/50 flex items-center justify-center gap-2 transform active:scale-95">
+                    <i class="fa-solid fa-stop"></i> STOP
+                </button>
+            </div>
+            
+            <!-- Active Indicator -->
+            <div id="status-overlay" class="absolute top-4 right-4 pointer-events-none hidden">
+                 <div class="w-3 h-3 bg-red-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.8)]"></div>
+            </div>
+        </div>
+
+        <!-- Feedback Toast -->
+        <div id="feedback" class="hidden bg-gray-800 border border-pink-500/30 text-pink-400 px-6 py-3 rounded-2xl text-center font-bold shadow-2xl transition-all duration-300 transform scale-100">
+            <i class="fa-solid fa-circle-check mr-2"></i> <span id="feedback-text">Code added!</span>
+        </div>
+
+        <!-- Manual Input (Floating Pill) -->
+        <div class="bg-[#2a2a2a] p-1.5 rounded-full flex shadow-lg border border-gray-800">
+            <input type="text" id="manual-code" placeholder="Type barcode manually..." 
+                   class="flex-1 bg-transparent border-none text-white px-4 py-2 text-sm focus:outline-none placeholder-gray-500 font-semibold">
+            <button onclick="addManual()" class="bg-gray-700 hover:bg-gray-600 text-white w-10 h-10 rounded-full flex items-center justify-center transition">
+                <i class="fa-solid fa-arrow-up"></i>
+            </button>
+        </div>
+
+        <!-- Items List Header -->
+        <div class="flex justify-between items-end px-2 pt-2">
+            <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest">Inventory</h2>
+            <button onclick="clearCurrentList()" class="text-xs font-bold text-red-400 hover:text-red-300 bg-red-500/10 px-3 py-1 rounded-full transition">CLEAR</button>
+        </div>
+
+        <!-- Items List -->
+        <div id="inventory-list" class="space-y-3 pb-24">
+            <!-- Items injected here -->
+            <div class="text-center text-gray-600 py-10 font-bold text-sm" id="empty-state">
+                <i class="fa-solid fa-box-open text-3xl mb-3 opacity-20 block"></i>
+                No items yet
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Footer Action -->
+    <div class="fixed bottom-6 left-4 right-4 z-30">
+        <button onclick="exportData()" class="w-full glass-panel bg-gray-800/90 hover:bg-gray-700 text-white font-extrabold py-4 px-6 rounded-3xl shadow-2xl flex items-center justify-center transition transform active:scale-[0.98] border border-gray-700">
+            <i class="fa-solid fa-share-from-square mr-3 text-pink-500"></i> Share List
+        </button>
+    </div>
+
+    <!-- Audio for Beep -->
+    <audio id="beep-sound" src="data:audio/wav;base64,UklGRl9vT1dBUXABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAA=="></audio>
+
+
+    <script>
+        // --- State Management ---
+        let appState = {
+            lists: {},
+            activeListId: null
+        };
+
+        let html5QrcodeScanner = null;
+        let isScanning = false;
+        let lastScannedCode = null;
+        let lastScannedTime = 0;
+        
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadFromStorage();
+            renderList();
+            updateListDisplay();
+        });
+
+        // --- Debugging and Error Dialog ---
+        function showErrorDialog(title, message) {
+            document.getElementById('error-dialog-title').textContent = title;
+            document.getElementById('error-dialog-message').textContent = message;
+            document.getElementById('error-dialog-overlay').classList.remove('hidden');
+        }
+
+        // --- List Management ---
+
+        function toggleListsMenu() {
+            const overlay = document.getElementById('lists-overlay');
+            if (overlay.classList.contains('hidden')) {
+                renderListsMenu();
+                overlay.classList.remove('hidden');
+                // Animate in
+                setTimeout(() => overlay.classList.remove('opacity-0'), 10);
+            } else {
+                overlay.classList.add('hidden');
+            }
+        }
+
+        function createNewList() {
+            const input = document.getElementById('new-list-name');
+            const name = input.value.trim();
+            if (!name) return;
+
+            const newId = Date.now().toString();
+            appState.lists[newId] = {
+                name: name,
+                items: {},
+                createdAt: Date.now()
+            };
+            
+            appState.activeListId = newId;
+            
+            input.value = '';
+            saveToStorage();
+            renderListsMenu();
+            renderList();
+            updateListDisplay();
+            toggleListsMenu();
+        }
+
+        function switchList(id) {
+            appState.activeListId = id;
+            saveToStorage();
+            renderList();
+            updateListDisplay();
+            toggleListsMenu();
+        }
+
+        function deleteList(id, event) {
+            event.stopPropagation();
+            if (Object.keys(appState.lists).length <= 1) {
+                showErrorDialog("List Limit Reached", "You must have at least one list in the system. Cannot delete the last one.");
+                return;
+            }
+            if (confirm(`Delete "${appState.lists[id].name}"?`)) {
+                delete appState.lists[id];
+                if (id === appState.activeListId) {
+                    appState.activeListId = Object.keys(appState.lists)[0];
+                }
+                saveToStorage();
+                renderListsMenu();
+                renderList();
+                updateListDisplay();
+            }
+        }
+
+        function renameList(id, event) {
+            event.stopPropagation();
+            const newName = prompt("New name:", appState.lists[id].name);
+            if(newName && newName.trim()) {
+                appState.lists[id].name = newName.trim();
+                saveToStorage();
+                renderListsMenu();
+                updateListDisplay();
+            }
+        }
+
+        function renderListsMenu() {
+            const container = document.getElementById('lists-container');
+            container.innerHTML = '';
+            const listIds = Object.keys(appState.lists).sort((a,b) => appState.lists[b].createdAt - appState.lists[a].createdAt);
+
+            listIds.forEach(id => {
+                const list = appState.lists[id];
+                const isActive = id === appState.activeListId;
+                const itemCount = Object.values(list.items).reduce((a, b) => a + b, 0);
+
+                const el = document.createElement('div');
+                // Floating card style for lists
+                el.className = `p-4 rounded-3xl cursor-pointer flex justify-between items-center transition-all duration-200 border-2 ${
+                    isActive 
+                    ? 'bg-gray-800 border-pink-500 shadow-[0_0_20px_rgba(236,72,153,0.1)]' 
+                    : 'bg-transparent border-gray-800 hover:bg-gray-900 text-gray-400'
+                }`;
+                el.onclick = () => switchList(id);
+
+                el.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center ${isActive ? 'bg-pink-500 text-white' : 'bg-gray-800 text-gray-600'}">
+                            <i class="fa-solid fa-box"></i>
+                        </div>
+                        <div>
+                            <div class="font-bold text-lg leading-tight ${isActive ? 'text-white' : 'text-gray-300'}">
+                                ${list.name}
+                            </div>
+                            <div class="text-xs font-bold ${isActive ? 'text-pink-400' : 'text-gray-600'}">${itemCount} items</div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-2">
+                        ${isActive ? '' : `
+                        <button onclick="deleteList('${id}', event)" class="w-8 h-8 rounded-full hover:bg-red-500/20 text-gray-600 hover:text-red-400 flex items-center justify-center transition">
+                            <i class="fa-solid fa-trash text-sm"></i>
+                        </button>
+                        `}
+                    </div>
+                `;
+                container.appendChild(el);
+            });
+        }
+
+        function updateListDisplay() {
+            if(!appState.activeListId || !appState.lists[appState.activeListId]) {
+                document.getElementById('current-list-display').textContent = "Select a list";
+                return;
+            }
+            const list = appState.lists[appState.activeListId];
+            document.getElementById('current-list-display').textContent = list.name;
+        }
+
+        // --- Scanner ---
+        async function startScanner() {
+            try {
+                if (!html5QrcodeScanner) {
+                    html5QrcodeScanner = new Html5Qrcode("reader");
+                }
+                const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+                await html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure);
+                isScanning = true;
+                updateScannerUI(true);
+            } catch (err) {
+                console.error("Camera Initialization Error:", err);
+                showErrorDialog("Camera Error", "Could not access the camera. Check permissions, ensure HTTPS is used, and refresh.");
+            }
+        }
+
+        async function stopScanner() {
+            if (html5QrcodeScanner && isScanning) {
+                try {
+                    await html5QrcodeScanner.stop();
+                    isScanning = false;
+                    updateScannerUI(false);
+                } catch (err) { console.error(err); }
+            }
+        }
+
+        function updateScannerUI(active) {
+            const startBtn = document.getElementById('start-btn');
+            const stopBtn = document.getElementById('stop-btn');
+            const overlay = document.getElementById('status-overlay');
+            const readerDiv = document.getElementById('reader');
+
+            if (active) {
+                startBtn.classList.add('hidden');
+                stopBtn.classList.remove('hidden');
+                overlay.classList.remove('hidden');
+                readerDiv.style.borderColor = '#ec4899'; // Pink-500 border
+                readerDiv.style.borderWidth = '2px';
+                readerDiv.style.borderStyle = 'solid';
+            } else {
+                startBtn.classList.remove('hidden');
+                stopBtn.classList.add('hidden');
+                overlay.classList.add('hidden');
+                readerDiv.style.border = 'none';
+            }
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            const now = Date.now();
+            if (decodedText === lastScannedCode && (now - lastScannedTime < 1500)) return; 
+            lastScannedCode = decodedText;
+            lastScannedTime = now;
+
+            const reader = document.getElementById('reader');
+            reader.classList.add('scan-flash');
+            setTimeout(() => reader.classList.remove('scan-flash'), 400);
+            
+            handleScan(decodedText);
+        }
+
+        function onScanFailure(error) { }
+
+        // --- Inventory ---
+        function getCurrentItems() {
+            if (!appState.activeListId || !appState.lists[appState.activeListId]) return {};
+            return appState.lists[appState.activeListId].items;
+        }
+
+        function handleScan(code) {
+            code = code.trim();
+            if(!code) return;
+
+            let wasRepaired = false;
+            // Self-healing: If state is corrupted (active ID missing or invalid), try to fix it
+            if (!appState.activeListId || !appState.lists[appState.activeListId]) {
+                const availableIds = Object.keys(appState.lists);
+                if (availableIds.length > 0) {
+                    appState.activeListId = availableIds[0];
+                    wasRepaired = true;
+                } else {
+                    createDefaultList();
+                    wasRepaired = true;
+                }
+                saveToStorage();
+                updateListDisplay();
+
+                if (wasRepaired) {
+                     showErrorDialog("State Repaired!", `The active list was missing. State has been repaired and the item added to: ${appState.lists[appState.activeListId].name}`);
+                }
+            }
+
+            const currentList = appState.lists[appState.activeListId];
+            if (!currentList) {
+                showErrorDialog("Critical Error", "No active list is available, even after repair attempts. Item not saved.");
+                return;
+            }
+
+            if (currentList.items[code]) {
+                currentList.items[code]++;
+                showFeedback(`+1: ${code}`);
+            } else {
+                currentList.items[code] = 1;
+                showFeedback(`New: ${code}`);
+            }
+            
+            saveToStorage();
+            renderList();
+        }
+
+        function addManual() {
+            const input = document.getElementById('manual-code');
+            const code = input.value.trim();
+            if (code) {
+                handleScan(code);
+                input.value = '';
+            }
+        }
+
+        function updateQuantity(code, change) {
+            const currentList = appState.lists[appState.activeListId];
+            // Safety check
+            if (!currentList || !currentList.items) return;
+
+            if (currentList.items[code]) {
+                currentList.items[code] += change;
+                if (currentList.items[code] <= 0) {
+                    delete currentList.items[code];
+                }
+                saveToStorage();
+                renderList();
+            }
+        }
+
+        function deleteItem(code) {
+            if(confirm(`Remove ${code}?`)) {
+                const currentList = appState.lists[appState.activeListId];
+                if (currentList && currentList.items) {
+                    delete currentList.items[code];
+                    saveToStorage();
+                    renderList();
+                }
+            }
+        }
+
+        function clearCurrentList() {
+            const currentList = appState.lists[appState.activeListId];
+            if(!currentList || Object.keys(currentList.items).length === 0) return;
+            if(confirm(`Clear all ${Object.keys(currentList.items).length} items from "${currentList.name}"?`)) {
+                currentList.items = {};
+                saveToStorage();
+                renderList();
+            }
+        }
+
+        // --- Render Items (Bubble Style) ---
+        function renderList() {
+            const listEl = document.getElementById('inventory-list');
+            const emptyState = document.getElementById('empty-state');
+            const totalCountEl = document.getElementById('total-count');
+
+            // Null check is necessary, but the elements should now *always* be found due to the clearing fix below.
+            if (!listEl || !emptyState || !totalCountEl) {
+                console.error("renderList: Failed to find critical DOM elements (#inventory-list, #empty-state, or #total-count). Aborting render.");
+                showErrorDialog("Critical DOM Error", "The app structure is missing required elements. Please reload the page.");
+                return;
+            }
+
+            // FIX: Clear only the dynamically added item elements.
+            // This prevents the static #empty-state element from being detached from the DOM 
+            // by listEl.innerHTML = '', which was causing it to be null on subsequent getElementById calls.
+            
+            // Remove all children *except* the empty-state element.
+            Array.from(listEl.children).forEach(child => {
+                if (child.id !== 'empty-state') {
+                    child.remove();
+                }
+            });
+            
+            const items = getCurrentItems();
+            const codes = Object.keys(items).reverse();
+            
+            if (codes.length === 0) {
+                emptyState.style.display = 'block';
+            } else {
+                emptyState.style.display = 'none';
+            }
+
+            let totalUniqueItems = codes.length;
+
+            codes.forEach(code => {
+                const qty = items[code];
+
+                const itemDiv = document.createElement('div');
+                // Floating Bubble Item Style
+                itemDiv.className = "bg-[#2a2a2a] p-4 rounded-[1.2rem] flex justify-between items-center transition transform hover:scale-[1.01] hover:bg-[#333]";
+                itemDiv.innerHTML = `
+                    <div class="overflow-hidden mr-3">
+                        <div class="font-mono font-bold text-white text-lg truncate w-full tracking-wide" title="${code}">${code}</div>
+                        <div class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">Barcode</div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="flex items-center bg-black/40 rounded-full p-1 border border-gray-700">
+                            <button onclick="updateQuantity('${code}', -1)" class="w-8 h-8 rounded-full bg-gray-700 hover:bg-gray-600 text-white flex items-center justify-center font-bold text-sm transition active:scale-90">-</button>
+                            <span class="w-8 text-center font-bold text-sm text-pink-400">${qty}</span>
+                            <button onclick="updateQuantity('${code}', 1)" class="w-8 h-8 rounded-full bg-gray-700 hover:bg-gray-600 text-white flex items-center justify-center font-bold text-sm transition active:scale-90">+</button>
+                        </div>
+                        <button onclick="deleteItem('${code}')" class="w-8 h-8 rounded-full hover:bg-red-500/20 text-gray-600 hover:text-red-400 flex items-center justify-center transition ml-1">
+                            <i class="fa-solid fa-trash text-xs"></i>
+                        </button>
+                    </div>
+                `;
+                // Insert the new item before the static emptyState element to keep the list organized.
+                listEl.insertBefore(itemDiv, emptyState);
+            });
+
+            totalCountEl.textContent = `${totalUniqueItems}`;
+        }
+
+        function showFeedback(message) {
+            const el = document.getElementById('feedback');
+            const textEl = document.getElementById('feedback-text');
+            textEl.textContent = message;
+            
+            el.classList.remove('hidden');
+            el.classList.add('scale-100', 'opacity-100');
+            el.classList.remove('scale-90', 'opacity-0');
+
+            if(window.feedbackTimeout) clearTimeout(window.feedbackTimeout);
+            window.feedbackTimeout = setTimeout(() => {
+                el.classList.add('hidden');
+            }, 2500);
+        }
+
+        // --- Export & Storage ---
+        function exportData() {
+            const items = getCurrentItems();
+            const codes = Object.keys(items);
+            if (codes.length === 0) {
+                showErrorDialog("Export Failed", "There are no items in the current list to share.");
+                return;
+            }
+
+            const listName = (appState.lists[appState.activeListId]?.name || "inventory").replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            let csvContent = "barcode,quantity\n";
+            codes.forEach(code => csvContent += `${code},${items[code]}\n`);
+
+            const fileName = `${listName}_${new Date().toISOString().slice(0,10)}.txt`;
+
+            if (navigator.share && navigator.canShare) {
+                const file = new File([csvContent], fileName, { type: 'text/plain' });
+                navigator.share({
+                    title: appState.lists[appState.activeListId]?.name || "Inventory",
+                    text: 'Barcode List',
+                    files: [file]
+                }).catch(console.error);
+            } else {
+                const blob = new Blob([csvContent], { type: 'text/plain;charset=utf-8;' });
+                const link = document.createElement("a");
+                if (link.download !== undefined) {
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute("href", url);
+                    link.setAttribute("download", fileName);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            }
+        }
+
+        function saveToStorage() {
+            localStorage.setItem('scanner_app_data', JSON.stringify(appState));
+        }
+
+        function loadFromStorage() {
+            const newData = localStorage.getItem('scanner_app_data');
+            const oldData = localStorage.getItem('barcode_inventory'); // Migration
+
+            if (newData) {
+                try {
+                    appState = JSON.parse(newData);
+                    
+                    // Validate Lists existence
+                    if(!appState.lists || Object.keys(appState.lists).length === 0) {
+                        createDefaultList();
+                        return;
+                    }
+
+                    // Validate Active List ID (Fix for "Not storing" bug)
+                    // If activeListId is null or points to a non-existent list, fix it.
+                    if (!appState.activeListId || !appState.lists[appState.activeListId]) {
+                        // Repair: Set active list to the most recently created one
+                        const sortedIds = Object.keys(appState.lists).sort((a,b) => 
+                            (appState.lists[b].createdAt || 0) - (appState.lists[a].createdAt || 0)
+                        );
+                        appState.activeListId = sortedIds[0];
+                        saveToStorage();
+                    }
+
+                } catch(e) { 
+                    console.error("Failed to load state", e);
+                    createDefaultList(); 
+                }
+            } else if (oldData) {
+                try {
+                    const oldItems = JSON.parse(oldData);
+                    const defaultId = Date.now().toString();
+                    appState = { lists: { [defaultId]: { name: "Default List", items: oldItems, createdAt: Date.now() } }, activeListId: defaultId };
+                    saveToStorage();
+                    localStorage.removeItem('barcode_inventory');
+                } catch(e) { createDefaultList(); }
+            } else {
+                createDefaultList();
+            }
+        }
+
+        function createDefaultList() {
+            const id = Date.now().toString();
+            appState = { lists: { [id]: { name: "My Scans", items: {}, createdAt: Date.now() } }, activeListId: id };
+            saveToStorage();
+        }
+    </script>
+</body>
+</html>
