@@ -475,6 +475,11 @@
             
             // Manual entry accepts any non-empty string now
 
+            // VIBRATION FEEDBACK
+            if (navigator.vibrate) {
+                navigator.vibrate(200);
+            }
+
             let wasRepaired = false;
             // Self-healing: If state is corrupted (active ID missing or invalid), try to fix it
             if (!appState.activeListId || !appState.lists[appState.activeListId]) {
