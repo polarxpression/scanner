@@ -3,54 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Scanner</title>
+    <title>Scanner Pro</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%23f472b6'/%3E%3Cstop offset='100%25' stop-color='%239333ea'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='256' cy='256' r='256' fill='url(%23g)'/%3E%3Cpath fill='%23fff' d='M100 130h40v252h-40zm70 0h30v252h-30zm60 0h50v252h-50zm80 0h30v252h-30zm60 0h42v252h-42z'/%3E%3C/svg%3E">
 
-    <link rel="manifest" href="manifest.json">
-
     <style>
         body {
             font-family: 'Nunito', sans-serif;
-            background-color: #1a1a1a; /* Deep charcoal */
+            background-color: #121212;
             color: #f3f4f6;
             overscroll-behavior-y: none;
         }
 
-        /* Hide scrollbar for cleaner look */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #1a1a1a; 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #444; 
-            border-radius: 10px;
-        }
-
         #reader {
             width: 100%;
-            border-radius: 1.5rem; /* rounded-3xl */
+            border-radius: 1.5rem;
             overflow: hidden;
             background: #000;
-            box-shadow: inset 0 0 0 2px rgba(255,255,255,0.1); /* Inner rim */
+            cursor: crosshair;
         }
+        
         #reader video {
             object-fit: cover;
             border-radius: 1.5rem;
-        }
-        
-        #reader__scan_region {
-            background: rgba(0,0,0,0.2);
         }
         
         #reader__dashboard_section_csr span, 
@@ -63,230 +43,358 @@
         }
 
         @keyframes flashAnimation {
-            0% { background-color: rgba(236, 72, 153, 0.6); } /* Pink-500 flash */
+            0% { background-color: rgba(236, 72, 153, 0.6); }
             100% { background-color: transparent; }
         }
 
-        /* Glassmorphism utilities */
         .glass-panel {
             background: rgba(40, 40, 40, 0.7);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.08);
         }
-        
-        /* Error Dialog Specific Styling */
-        .error-dialog {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            backdrop-filter: blur(5px);
-            z-index: 100;
-            display: flex;
-            align-items: center;
-            justify-content: center; /* Corrected to center */
+
+        .fab {
+            box-shadow: 0 10px 25px -5px rgba(236, 72, 153, 0.5);
+        }
+
+        /* Custom focus ring animation */
+        .focus-ring {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            border: 2px solid #ec4899;
+            border-radius: 50%;
+            pointer-events: none;
+            transform: translate(-50%, -50%) scale(2);
+            opacity: 0;
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+            z-index: 50;
+        }
+        .focus-ring.active {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
         }
     </style>
 </head>
 <body class="h-screen flex flex-col relative overflow-hidden selection:bg-pink-500 selection:text-white">
 
-    <div id="error-dialog-overlay" class="error-dialog hidden">
-        <div class="bg-gray-800 p-6 m-4 max-w-sm w-full rounded-3xl shadow-2xl border-2 border-red-500/50 transform transition-all duration-300 scale-95" id="error-dialog-content">
+    <!-- Startup Dialog -->
+    <div id="startup-overlay" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md transition-opacity duration-300">
+        <div class="bg-gray-800 p-8 m-4 max-w-sm w-full rounded-[2.5rem] shadow-2xl border border-gray-700 text-center">
+            <div class="w-20 h-20 bg-gradient-to-tr from-pink-500 to-purple-600 rounded-3xl mx-auto mb-6 flex items-center justify-center shadow-2xl rotate-3">
+                <i class="fa-solid fa-barcode text-white text-3xl"></i>
+            </div>
+            <h2 class="text-2xl font-black text-white mb-2">Welcome Back</h2>
+            <p class="text-gray-400 text-sm mb-8">How would you like to begin your scanning session today?</p>
+            <div class="space-y-3">
+                <button onclick="handleStartup('continue')" class="w-full bg-pink-500 hover:bg-pink-400 text-white py-4 rounded-2xl font-bold transition flex items-center justify-center gap-3">
+                    <i class="fa-solid fa-rotate-left"></i> Continue Last List
+                </button>
+                <button onclick="handleStartup('new')" class="w-full bg-gray-700 hover:bg-gray-600 text-white py-4 rounded-2xl font-bold transition">
+                    Start New Collection
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Error Dialog -->
+    <div id="error-dialog-overlay" class="fixed inset-0 z-[110] hidden flex items-center justify-center bg-black/80 backdrop-blur-sm">
+        <div class="bg-gray-800 p-6 m-4 max-w-sm w-full rounded-3xl shadow-2xl border-2 border-red-500/50">
             <div class="flex items-center mb-4">
                 <i class="fa-solid fa-triangle-exclamation text-3xl text-red-500 mr-3"></i>
                 <h3 class="text-xl font-extrabold text-red-400" id="error-dialog-title">Alert</h3>
             </div>
-            <p class="text-gray-300 text-sm mb-6" id="error-dialog-message">An unexpected issue occurred.</p>
-            <button onclick="document.getElementById('error-dialog-overlay').classList.add('hidden')" 
-                    class="w-full bg-red-500 hover:bg-red-400 text-white py-3 rounded-xl font-bold transition">
-                Dismiss
-            </button>
+            <p class="text-gray-300 text-sm mb-6" id="error-dialog-message"></p>
+            <button onclick="document.getElementById('error-dialog-overlay').classList.add('hidden')" class="w-full bg-red-500 hover:bg-red-400 text-white py-3 rounded-xl font-bold transition">Dismiss</button>
         </div>
     </div>
 
+    <!-- Lists Overlay -->
     <div id="lists-overlay" class="absolute inset-0 z-50 hidden flex flex-col p-6 transition-all duration-300 backdrop-blur-xl bg-black/80">
         <div class="flex justify-between items-center mb-8">
-            <h2 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500">My Collections</h2>
-            <button onclick="toggleListsMenu()" class="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition">
+            <h2 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500">Collections</h2>
+            <button onclick="toggleListsMenu()" class="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition">
                 <i class="fa-solid fa-xmark text-xl"></i>
             </button>
         </div>
-
-        <div class="bg-gray-900 p-2 rounded-full border border-gray-700 flex items-center mb-6 shadow-lg">
-            <input type="text" id="new-list-name" placeholder="Name your new list..." 
-                   class="flex-1 bg-transparent border-none text-white px-4 py-2 focus:outline-none placeholder-gray-500 font-semibold">
+        <div class="bg-gray-900 p-2 rounded-full border border-gray-700 flex items-center mb-6">
+            <input type="text" id="new-list-name" placeholder="List name..." class="flex-1 bg-transparent border-none text-white px-4 py-2 focus:outline-none placeholder-gray-500 font-semibold">
             <button onclick="createNewList()" class="bg-pink-500 hover:bg-pink-400 text-white w-10 h-10 rounded-full flex items-center justify-center transition shadow-lg shadow-pink-500/30">
                 <i class="fa-solid fa-plus"></i>
             </button>
         </div>
-
-        <div id="lists-container" class="flex-1 overflow-y-auto space-y-3 pr-2">
-            </div>
+        <div id="lists-container" class="flex-1 overflow-y-auto space-y-3"></div>
     </div>
 
+    <!-- Main UI -->
     <div class="px-4 pt-4 pb-2 z-20">
-        <header class="glass-panel rounded-3xl p-3 px-5 shadow-2xl flex justify-between items-center">
+        <header class="glass-panel rounded-3xl p-3 px-5 flex justify-between items-center shadow-xl">
             <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-pink-400 to-purple-600 flex items-center justify-center shadow-lg shadow-pink-500/20">
+                <div class="w-8 h-8 rounded-lg bg-pink-500 flex items-center justify-center">
                     <i class="fa-solid fa-barcode text-white text-xs"></i>
                 </div>
-                <h1 class="text-lg font-bold tracking-tight">Scanner</h1>
+                <h1 class="text-lg font-bold">Scanner</h1>
             </div>
-            
-            <button onclick="toggleListsMenu()" class="bg-gray-800 hover:bg-gray-700 text-gray-200 px-4 py-2 rounded-full text-xs font-bold transition flex items-center gap-2 border border-gray-700">
-                <i class="fa-solid fa-layer-group"></i> Lists
+            <button onclick="exportData()" class="bg-pink-500/10 hover:bg-pink-500/20 text-pink-500 px-4 py-2 rounded-full text-xs font-bold transition flex items-center gap-2 border border-pink-500/30">
+                <i class="fa-solid fa-share-nodes"></i> Share
             </button>
         </header>
     </div>
 
-    <main class="flex-1 overflow-y-auto p-4 space-y-5">
-        
+    <main class="flex-1 overflow-y-auto p-4 space-y-6">
         <div class="flex justify-between items-center px-2">
-            <div>
-                <div class="text-xs text-gray-400 font-bold uppercase tracking-wider mb-1">Current List</div>
-                <div id="current-list-display" class="text-2xl font-extrabold text-white truncate max-w-[200px]">...</div>
+            <div class="max-w-[60%]">
+                <div class="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Active List</div>
+                <div id="current-list-display" class="text-2xl font-black text-white truncate">...</div>
             </div>
-            <div class="bg-gray-800 px-4 py-2 rounded-full border border-gray-700 shadow-inner">
-                <span id="total-count" class="font-mono font-bold text-pink-400">0</span> <span class="text-xs text-gray-500 font-bold">ITEMS</span>
+            <div class="bg-gray-800/50 px-4 py-2 rounded-2xl border border-gray-800">
+                <span id="total-count" class="font-mono font-bold text-pink-400 text-xl">0</span>
             </div>
         </div>
 
-        <div class="bg-[#222] p-3 rounded-[2rem] shadow-xl border border-gray-800 relative">
-            <div id="reader" class="min-h-[250px] relative"></div>
+        <div class="bg-[#1e1e1e] p-3 rounded-[2.5rem] shadow-2xl border border-white/5 relative group">
+            <div id="reader" onclick="focusCamera(event)" class="min-h-[280px] relative"></div>
+            <div id="focus-ring" class="focus-ring"></div>
             
-            <div class="absolute bottom-6 left-0 right-0 flex justify-center z-10 px-6 gap-4">
-                <button id="start-btn" onclick="startScanner()" class="flex-1 bg-pink-500 hover:bg-pink-400 text-white py-4 rounded-2xl font-extrabold text-sm transition shadow-lg shadow-pink-900/50 flex items-center justify-center gap-2 transform active:scale-95">
-                    <i class="fa-solid fa-camera"></i> SCAN EAN-13
+            <!-- Floating Flashlight Toggle -->
+            <button id="torch-btn" onclick="toggleTorch()" class="absolute top-6 right-6 z-20 w-12 h-12 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white hidden flex items-center justify-center transition active:scale-90">
+                <i class="fa-solid fa-bolt-auto"></i>
+            </button>
+
+            <div class="absolute bottom-6 left-0 right-0 flex justify-center z-10 px-6 gap-3">
+                <button id="start-btn" onclick="startScanner()" class="flex-1 bg-white text-black py-4 rounded-2xl font-black text-sm transition shadow-xl active:scale-95">
+                    <i class="fa-solid fa-camera mr-2"></i> OPEN CAMERA
                 </button>
-                <button id="stop-btn" onclick="stopScanner()" class="hidden flex-1 bg-red-500 hover:bg-red-400 text-white py-4 rounded-2xl font-extrabold text-sm transition shadow-lg shadow-red-900/50 flex items-center justify-center gap-2 transform active:scale-95">
-                    <i class="fa-solid fa-stop"></i> STOP
+                <button id="stop-btn" onclick="stopScanner()" class="hidden flex-1 bg-red-500 text-white py-4 rounded-2xl font-black text-sm transition shadow-xl active:scale-95">
+                    <i class="fa-solid fa-stop mr-2"></i> CLOSE
                 </button>
-            </div>
-            
-            <div id="status-overlay" class="absolute top-4 right-4 pointer-events-none hidden">
-                 <div class="w-3 h-3 bg-red-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.8)]"></div>
             </div>
         </div>
 
-        <div id="feedback" class="hidden bg-gray-800 border border-pink-500/30 text-pink-400 px-6 py-3 rounded-2xl text-center font-bold shadow-2xl transition-all duration-300 transform scale-100">
-            <i class="fa-solid fa-circle-check mr-2"></i> <span id="feedback-text">Code added!</span>
+        <div id="feedback" class="hidden glass-panel text-pink-400 px-6 py-4 rounded-2xl text-center font-bold shadow-xl animate-bounce">
+            <i class="fa-solid fa-check-circle mr-2"></i> <span id="feedback-text">Code added!</span>
         </div>
 
-        <div class="bg-[#2a2a2a] p-1.5 rounded-full flex shadow-lg border border-gray-800">
-            <input type="text" id="manual-code" placeholder="Type barcode manually..." 
-                   class="flex-1 bg-transparent border-none text-white px-4 py-2 text-sm focus:outline-none placeholder-gray-500 font-semibold">
-            <button onclick="addManual()" class="bg-gray-700 hover:bg-gray-600 text-white w-10 h-10 rounded-full flex items-center justify-center transition">
-                <i class="fa-solid fa-arrow-up"></i>
+        <div class="bg-gray-800/40 p-2 rounded-2xl flex border border-gray-700/50">
+            <input type="text" id="manual-code" placeholder="Enter barcode manually..." class="flex-1 bg-transparent border-none text-white px-4 py-2 text-sm focus:outline-none font-semibold">
+            <button onclick="addManual()" class="bg-gray-700 hover:bg-pink-500 text-white w-10 h-10 rounded-xl flex items-center justify-center transition">
+                <i class="fa-solid fa-plus"></i>
             </button>
         </div>
 
-        <div class="flex justify-between items-end px-2 pt-2">
-            <h2 class="text-sm font-bold text-gray-500 uppercase tracking-widest">Inventory</h2>
-            <button onclick="clearCurrentList()" class="text-xs font-bold text-red-400 hover:text-red-300 bg-red-500/10 px-3 py-1 rounded-full transition">CLEAR</button>
-        </div>
-
-        <div id="inventory-list" class="space-y-3 pb-24">
-            <div class="text-center text-gray-600 py-10 font-bold text-sm" id="empty-state">
-                <i class="fa-solid fa-box-open text-3xl mb-3 opacity-20 block"></i>
-                No items yet
+        <div id="inventory-list" class="space-y-3 pb-32">
+            <div class="text-center text-gray-600 py-12" id="empty-state">
+                <i class="fa-solid fa-box-open text-4xl mb-4 opacity-10"></i>
+                <p class="font-bold text-xs uppercase tracking-widest">Inventory empty</p>
             </div>
         </div>
-
     </main>
 
-    <div class="fixed bottom-6 left-4 right-4 z-30">
-        <button onclick="exportData()" class="w-full glass-panel bg-gray-800/90 hover:bg-gray-700 text-white font-extrabold py-4 px-6 rounded-3xl shadow-2xl flex items-center justify-center transition transform active:scale-[0.98] border border-gray-700">
-            <i class="fa-solid fa-share-from-square mr-3 text-pink-500"></i> Share List
-        </button>
-    </div>
-
-    <audio id="beep-sound" src="data:audio/wav;base64,UklGRl9vT1dBUXABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAAABAA=="></audio>
-
+    <!-- FLOATING ACTION BUTTON FOR LISTS -->
+    <button onclick="toggleListsMenu()" class="fab fixed bottom-8 right-6 w-16 h-16 rounded-2xl bg-gradient-to-tr from-pink-500 to-purple-600 text-white shadow-2xl flex items-center justify-center z-40 transition transform hover:scale-110 active:scale-90">
+        <i class="fa-solid fa-layer-group text-2xl"></i>
+    </button>
 
     <script>
-        // --- State Management ---
-        let appState = {
-            lists: {},
-            activeListId: null
-        };
-
-        let html5QrcodeScanner = null;
+        let appState = { lists: {}, activeListId: null };
+        let html5QrScanner = null;
         let isScanning = false;
-        let lastScannedCode = null;
-        let lastScannedTime = 0;
-        
-        // --- Initialization ---
+        let torchActive = false;
+
+        // Initialization logic
         document.addEventListener('DOMContentLoaded', () => {
             loadFromStorage();
-            renderList();
-            updateListDisplay();
         });
 
-        // --- Debugging and Error Dialog ---
-        function showErrorDialog(title, message) {
-            document.getElementById('error-dialog-title').textContent = title;
-            document.getElementById('error-dialog-message').textContent = message;
-            document.getElementById('error-dialog-overlay').classList.remove('hidden');
+        function handleStartup(choice) {
+            document.getElementById('startup-overlay').classList.add('opacity-0');
+            setTimeout(() => {
+                document.getElementById('startup-overlay').classList.add('hidden');
+            }, 300);
+
+            if (choice === 'new') {
+                const newId = Date.now().toString();
+                appState.lists[newId] = { name: "New Collection " + new Date().toLocaleDateString(), items: {}, createdAt: Date.now() };
+                appState.activeListId = newId;
+                saveToStorage();
+            }
+            renderList();
+            updateListDisplay();
         }
 
-        // --- EAN-13 Validation ---
         function validateEAN13(code) {
-            // 1. Basic format check: must be 13 digits
-            if (!/^\d{13}$/.test(code)) {
-                return false;
-            }
-
-            // 2. Checksum validation
+            if (!/^\d{13}$/.test(code)) return false;
             let sum = 0;
             for (let i = 0; i < 12; i++) {
-                const digit = parseInt(code[i]);
-                // Odd positions (index 0, 2...) weight 1
-                // Even positions (index 1, 3...) weight 3
-                sum += (i % 2 === 0) ? digit : digit * 3;
+                sum += parseInt(code[i]) * (i % 2 === 0 ? 1 : 3);
             }
-            
-            const checkDigit = (10 - (sum % 10)) % 10;
-            const inputCheckDigit = parseInt(code[12]);
-
-            return checkDigit === inputCheckDigit;
+            const check = (10 - (sum % 10)) % 10;
+            return check === parseInt(code[12]);
         }
 
-        // --- List Management ---
+        async function startScanner() {
+            try {
+                if (!html5QrScanner) html5QrScanner = new Html5Qrcode("reader");
+                const config = { 
+                    fps: 15, 
+                    qrbox: { width: 250, height: 250 },
+                    formatsToSupport: [ Html5QrcodeSupportedFormats.EAN_13 ]
+                };
+                await html5QrScanner.start({ facingMode: "environment" }, config, onScanSuccess);
+                isScanning = true;
+                updateScannerUI(true);
+                
+                // Show torch button if supported
+                const capabilities = html5QrScanner.getRunningTrackCapabilities();
+                if (capabilities.torch) {
+                    document.getElementById('torch-btn').classList.remove('hidden');
+                }
+            } catch (err) {
+                showErrorDialog("Camera Error", "Ensure camera permissions are enabled.");
+            }
+        }
+
+        async function stopScanner() {
+            if (html5QrScanner && isScanning) {
+                await html5QrScanner.stop();
+                isScanning = false;
+                torchActive = false;
+                updateScannerUI(false);
+                document.getElementById('torch-btn').classList.add('hidden');
+            }
+        }
+
+        async function toggleTorch() {
+            if (!isScanning) return;
+            try {
+                torchActive = !torchActive;
+                await html5QrScanner.applyVideoConstraints({
+                    advanced: [{ torch: torchActive }]
+                });
+                const btn = document.getElementById('torch-btn');
+                btn.classList.toggle('bg-yellow-500', torchActive);
+                btn.classList.toggle('text-black', torchActive);
+            } catch (e) {
+                console.error("Torch error", e);
+            }
+        }
+
+        function focusCamera(e) {
+            if (!isScanning) return;
+            const ring = document.getElementById('focus-ring');
+            const rect = document.getElementById('reader').getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+
+            ring.style.left = `${x}px`;
+            ring.style.top = `${y}px`;
+            ring.classList.add('active');
+            
+            setTimeout(() => ring.classList.remove('active'), 600);
+
+            // Attempt to trigger auto-focus if browser supports it via constraints
+            if (html5QrScanner) {
+                html5QrScanner.applyVideoConstraints({
+                    advanced: [{ focusMode: "continuous" }, { focusMode: "manual" }]
+                }).catch(() => {});
+            }
+        }
+
+        function onScanSuccess(code) {
+            if (!validateEAN13(code)) return;
+            
+            const reader = document.getElementById('reader');
+            reader.classList.add('scan-flash');
+            setTimeout(() => reader.classList.remove('scan-flash'), 400);
+
+            if (navigator.vibrate) navigator.vibrate(100);
+            handleItemAdd(code);
+        }
+
+        function handleItemAdd(code) {
+            const list = appState.lists[appState.activeListId];
+            if (list.items[code]) {
+                list.items[code]++;
+                showFeedback(`+1 Count: ${code}`);
+            } else {
+                list.items[code] = 1;
+                showFeedback(`Added: ${code}`);
+            }
+            saveToStorage();
+            renderList();
+        }
+
+        function addManual() {
+            const input = document.getElementById('manual-code');
+            const code = input.value.trim();
+            if (code) {
+                handleItemAdd(code);
+                input.value = '';
+            }
+        }
+
+        function renderList() {
+            const container = document.getElementById('inventory-list');
+            const empty = document.getElementById('empty-state');
+            const items = appState.lists[appState.activeListId]?.items || {};
+            const codes = Object.keys(items).reverse();
+
+            // Clear previous
+            Array.from(container.children).forEach(c => { if(c.id !== 'empty-state') c.remove(); });
+            
+            empty.style.display = codes.length ? 'none' : 'block';
+            document.getElementById('total-count').textContent = codes.length;
+
+            codes.forEach(code => {
+                const el = document.createElement('div');
+                el.className = "bg-gray-800/40 p-4 rounded-3xl flex justify-between items-center border border-white/5";
+                el.innerHTML = `
+                    <div class="overflow-hidden">
+                        <div class="font-mono font-bold text-white tracking-wider truncate w-40">${code}</div>
+                        <div class="text-[9px] text-gray-500 font-black uppercase">${validateEAN13(code) ? 'EAN-13 Verified' : 'Manual Entry'}</div>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center bg-black/30 rounded-2xl p-1">
+                            <button onclick="updateQty('${code}', -1)" class="w-8 h-8 rounded-xl bg-gray-700 text-white font-bold">-</button>
+                            <span class="w-10 text-center font-bold text-pink-500">${items[code]}</span>
+                            <button onclick="updateQty('${code}', 1)" class="w-8 h-8 rounded-xl bg-gray-700 text-white font-bold">+</button>
+                        </div>
+                    </div>
+                `;
+                container.insertBefore(el, empty);
+            });
+        }
+
+        function updateQty(code, delta) {
+            const items = appState.lists[appState.activeListId].items;
+            items[code] += delta;
+            if (items[code] <= 0) delete items[code];
+            saveToStorage();
+            renderList();
+        }
+
+        function updateScannerUI(active) {
+            document.getElementById('start-btn').classList.toggle('hidden', active);
+            document.getElementById('stop-btn').classList.toggle('hidden', !active);
+        }
 
         function toggleListsMenu() {
             const overlay = document.getElementById('lists-overlay');
-            if (overlay.classList.contains('hidden')) {
-                renderListsMenu();
-                overlay.classList.remove('hidden');
-                setTimeout(() => overlay.classList.remove('opacity-0'), 10);
-            } else {
-                overlay.classList.add('hidden');
-            }
+            overlay.classList.toggle('hidden');
+            if (!overlay.classList.contains('hidden')) renderListsMenu();
         }
 
         function createNewList() {
-            const input = document.getElementById('new-list-name');
-            const name = input.value.trim();
-            if (!name) return;
-
-            const newId = Date.now().toString();
-            appState.lists[newId] = {
-                name: name,
-                items: {},
-                createdAt: Date.now()
-            };
-            
-            appState.activeListId = newId;
-            
-            input.value = '';
+            const name = document.getElementById('new-list-name').value.trim() || "My Collection";
+            const id = Date.now().toString();
+            appState.lists[id] = { name, items: {}, createdAt: Date.now() };
+            appState.activeListId = id;
             saveToStorage();
-            renderListsMenu();
+            toggleListsMenu();
             renderList();
             updateListDisplay();
-            toggleListsMenu();
+            document.getElementById('new-list-name').value = '';
         }
 
         function switchList(id) {
@@ -297,401 +405,61 @@
             toggleListsMenu();
         }
 
-        function deleteList(id, event) {
-            event.stopPropagation();
-            if (Object.keys(appState.lists).length <= 1) {
-                showErrorDialog("Action Denied", "We cannot delete the final list, sir.");
-                return;
-            }
-            if (confirm(`Delete "${appState.lists[id].name}"?`)) {
-                delete appState.lists[id];
-                if (id === appState.activeListId) {
-                    appState.activeListId = Object.keys(appState.lists)[0];
-                }
-                saveToStorage();
-                renderListsMenu();
-                renderList();
-                updateListDisplay();
-            }
-        }
-
         function renderListsMenu() {
             const container = document.getElementById('lists-container');
             container.innerHTML = '';
-            const listIds = Object.keys(appState.lists).sort((a,b) => appState.lists[b].createdAt - appState.lists[a].createdAt);
-
-            listIds.forEach(id => {
+            Object.keys(appState.lists).sort((a,b) => appState.lists[b].createdAt - appState.lists[a].createdAt).forEach(id => {
                 const list = appState.lists[id];
-                const isActive = id === appState.activeListId;
-                const itemCount = Object.values(list.items).reduce((a, b) => a + b, 0);
-
+                const active = id === appState.activeListId;
                 const el = document.createElement('div');
-                el.className = `p-4 rounded-3xl cursor-pointer flex justify-between items-center transition-all duration-200 border-2 ${
-                    isActive 
-                    ? 'bg-gray-800 border-pink-500 shadow-[0_0_20px_rgba(236,72,153,0.1)]' 
-                    : 'bg-transparent border-gray-800 hover:bg-gray-900 text-gray-400'
-                }`;
+                el.className = `p-4 rounded-3xl cursor-pointer flex justify-between items-center border-2 transition ${active ? 'bg-pink-500/10 border-pink-500' : 'bg-gray-900 border-transparent'}`;
                 el.onclick = () => switchList(id);
-
                 el.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full flex items-center justify-center ${isActive ? 'bg-pink-500 text-white' : 'bg-gray-800 text-gray-600'}">
-                            <i class="fa-solid fa-box"></i>
-                        </div>
-                        <div>
-                            <div class="font-bold text-lg leading-tight ${isActive ? 'text-white' : 'text-gray-300'}">
-                                ${list.name}
-                            </div>
-                            <div class="text-xs font-bold ${isActive ? 'text-pink-400' : 'text-gray-600'}">${itemCount} items</div>
-                        </div>
-                    </div>
-                    
-                    <div class="flex gap-2">
-                        ${isActive ? '' : `
-                        <button onclick="deleteList('${id}', event)" class="w-8 h-8 rounded-full hover:bg-red-500/20 text-gray-600 hover:text-red-400 flex items-center justify-center transition">
-                            <i class="fa-solid fa-trash text-sm"></i>
-                        </button>
-                        `}
-                    </div>
+                    <div class="font-bold ${active ? 'text-white' : 'text-gray-400'}">${list.name}</div>
+                    <div class="text-xs font-black text-pink-500">${Object.keys(list.items).length} SKU</div>
                 `;
                 container.appendChild(el);
             });
         }
 
         function updateListDisplay() {
-            if(!appState.activeListId || !appState.lists[appState.activeListId]) {
-                document.getElementById('current-list-display').textContent = "Select a list";
-                return;
-            }
-            const list = appState.lists[appState.activeListId];
-            document.getElementById('current-list-display').textContent = list.name;
+            document.getElementById('current-list-display').textContent = appState.lists[appState.activeListId]?.name || "Select List";
         }
 
-        // --- Scanner ---
-        async function startScanner() {
-            try {
-                if (!html5QrcodeScanner) {
-                    html5QrcodeScanner = new Html5Qrcode("reader");
-                }
-                // EAN_13 Enforced in config
-                const config = { 
-                    fps: 10, 
-                    qrbox: { width: 250, height: 250 }, 
-                    aspectRatio: 1.0,
-                    formatsToSupport: [ Html5QrcodeSupportedFormats.EAN_13 ]
-                };
-                await html5QrcodeScanner.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure);
-                isScanning = true;
-                updateScannerUI(true);
-            } catch (err) {
-                console.error("Camera Initialization Error:", err);
-                showErrorDialog("Camera Error", "I was unable to access the visual sensors. Please ensure permissions are granted.");
-            }
+        function showFeedback(msg) {
+            const f = document.getElementById('feedback');
+            document.getElementById('feedback-text').textContent = msg;
+            f.classList.remove('hidden');
+            setTimeout(() => f.classList.add('hidden'), 2000);
         }
 
-        async function stopScanner() {
-            if (html5QrcodeScanner && isScanning) {
-                try {
-                    await html5QrcodeScanner.stop();
-                    isScanning = false;
-                    updateScannerUI(false);
-                } catch (err) { console.error(err); }
-            }
-        }
-
-        function updateScannerUI(active) {
-            const startBtn = document.getElementById('start-btn');
-            const stopBtn = document.getElementById('stop-btn');
-            const overlay = document.getElementById('status-overlay');
-            const readerDiv = document.getElementById('reader');
-
-            if (active) {
-                startBtn.classList.add('hidden');
-                stopBtn.classList.remove('hidden');
-                overlay.classList.remove('hidden');
-                readerDiv.style.borderColor = '#ec4899'; // Pink-500 border
-                readerDiv.style.borderWidth = '2px';
-                readerDiv.style.borderStyle = 'solid';
-            } else {
-                startBtn.classList.remove('hidden');
-                stopBtn.classList.add('hidden');
-                overlay.classList.add('hidden');
-                readerDiv.style.border = 'none';
-            }
-        }
-
-        function onScanSuccess(decodedText, decodedResult) {
-            const now = Date.now();
-            if (decodedText === lastScannedCode && (now - lastScannedTime < 1500)) return; 
-            lastScannedCode = decodedText;
-            lastScannedTime = now;
-
-            const reader = document.getElementById('reader');
-            reader.classList.add('scan-flash');
-            setTimeout(() => reader.classList.remove('scan-flash'), 400);
-            
-            // Camera source
-            handleScan(decodedText, 'camera');
-        }
-
-        function onScanFailure(error) { }
-
-        // --- Inventory ---
-        function getCurrentItems() {
-            if (!appState.activeListId || !appState.lists[appState.activeListId]) return {};
-            return appState.lists[appState.activeListId].items;
-        }
-
-        // Updated handleScan to accept source
-        function handleScan(code, source = 'manual') {
-            code = code.trim();
-            if(!code) return;
-
-            // --- STRICT EAN-13 VALIDATION (CAMERA ONLY) ---
-            if (source === 'camera') {
-                if (!validateEAN13(code)) {
-                    showErrorDialog("Invalid Format", "I detected a code, but it is not a valid EAN-13 barcode, sir.");
-                    return;
-                }
-            }
-            
-            // Manual entry accepts any non-empty string now
-
-            // VIBRATION FEEDBACK
-            if (navigator.vibrate) {
-                navigator.vibrate(200);
-            }
-
-            let wasRepaired = false;
-            // Self-healing: If state is corrupted (active ID missing or invalid), try to fix it
-            if (!appState.activeListId || !appState.lists[appState.activeListId]) {
-                const availableIds = Object.keys(appState.lists);
-                if (availableIds.length > 0) {
-                    appState.activeListId = availableIds[0];
-                    wasRepaired = true;
-                } else {
-                    createDefaultList();
-                    wasRepaired = true;
-                }
-                saveToStorage();
-                updateListDisplay();
-            }
-
-            const currentList = appState.lists[appState.activeListId];
-            if (!currentList) {
-                showErrorDialog("Critical Error", "No active list available.");
-                return;
-            }
-
-            if (currentList.items[code]) {
-                currentList.items[code]++;
-                showFeedback(`+1: ${code}`);
-            } else {
-                currentList.items[code] = 1;
-                showFeedback(`New: ${code}`);
-            }
-            
-            saveToStorage();
-            renderList();
-        }
-
-        function addManual() {
-            const input = document.getElementById('manual-code');
-            const code = input.value.trim();
-            if (code) {
-                // Manual source
-                handleScan(code, 'manual');
-                input.value = '';
-            }
-        }
-
-        function updateQuantity(code, change) {
-            const currentList = appState.lists[appState.activeListId];
-            if (!currentList || !currentList.items) return;
-
-            if (currentList.items[code]) {
-                currentList.items[code] += change;
-                if (currentList.items[code] <= 0) {
-                    delete currentList.items[code];
-                }
-                saveToStorage();
-                renderList();
-            }
-        }
-
-        function deleteItem(code) {
-            if(confirm(`Remove ${code}?`)) {
-                const currentList = appState.lists[appState.activeListId];
-                if (currentList && currentList.items) {
-                    delete currentList.items[code];
-                    saveToStorage();
-                    renderList();
-                }
-            }
-        }
-
-        function clearCurrentList() {
-            const currentList = appState.lists[appState.activeListId];
-            if(!currentList || Object.keys(currentList.items).length === 0) return;
-            if(confirm(`Clear all items from "${currentList.name}"?`)) {
-                currentList.items = {};
-                saveToStorage();
-                renderList();
-            }
-        }
-
-        // --- Render Items (Bubble Style) ---
-        function renderList() {
-            const listEl = document.getElementById('inventory-list');
-            const emptyState = document.getElementById('empty-state');
-            const totalCountEl = document.getElementById('total-count');
-
-            if (!listEl || !emptyState || !totalCountEl) return;
-
-            // Remove all children *except* the empty-state element.
-            Array.from(listEl.children).forEach(child => {
-                if (child.id !== 'empty-state') {
-                    child.remove();
-                }
-            });
-            
-            const items = getCurrentItems();
-            const codes = Object.keys(items).reverse();
-            
-            if (codes.length === 0) {
-                emptyState.style.display = 'block';
-            } else {
-                emptyState.style.display = 'none';
-            }
-
-            let totalUniqueItems = codes.length;
-
-            codes.forEach(code => {
-                const qty = items[code];
-                
-                // Determine display type based on EAN13 validation
-                // We use the validator here just for the label
-                const isEAN13 = validateEAN13(code);
-                const typeLabel = isEAN13 ? 'EAN-13' : 'CUSTOM';
-
-                const itemDiv = document.createElement('div');
-                itemDiv.className = "bg-[#2a2a2a] p-4 rounded-[1.2rem] flex justify-between items-center transition transform hover:scale-[1.01] hover:bg-[#333]";
-                itemDiv.innerHTML = `
-                    <div class="overflow-hidden mr-3">
-                        <div class="font-mono font-bold text-white text-lg truncate w-full tracking-wide" title="${code}">${code}</div>
-                        <div class="text-[10px] uppercase font-bold text-gray-500 tracking-wider">${typeLabel}</div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <div class="flex items-center bg-black/40 rounded-full p-1 border border-gray-700">
-                            <button onclick="updateQuantity('${code}', -1)" class="w-8 h-8 rounded-full bg-gray-700 hover:bg-gray-600 text-white flex items-center justify-center font-bold text-sm transition active:scale-90">-</button>
-                            <span class="w-8 text-center font-bold text-sm text-pink-400">${qty}</span>
-                            <button onclick="updateQuantity('${code}', 1)" class="w-8 h-8 rounded-full bg-gray-700 hover:bg-gray-600 text-white flex items-center justify-center font-bold text-sm transition active:scale-90">+</button>
-                        </div>
-                        <button onclick="deleteItem('${code}')" class="w-8 h-8 rounded-full hover:bg-red-500/20 text-gray-600 hover:text-red-400 flex items-center justify-center transition ml-1">
-                            <i class="fa-solid fa-trash text-xs"></i>
-                        </button>
-                    </div>
-                `;
-                listEl.insertBefore(itemDiv, emptyState);
-            });
-
-            totalCountEl.textContent = `${totalUniqueItems}`;
-        }
-
-        function showFeedback(message) {
-            const el = document.getElementById('feedback');
-            const textEl = document.getElementById('feedback-text');
-            textEl.textContent = message;
-            
-            el.classList.remove('hidden');
-            el.classList.add('scale-100', 'opacity-100');
-            el.classList.remove('scale-90', 'opacity-0');
-
-            if(window.feedbackTimeout) clearTimeout(window.feedbackTimeout);
-            window.feedbackTimeout = setTimeout(() => {
-                el.classList.add('hidden');
-            }, 2500);
-        }
-
-        // --- Export & Storage ---
         function exportData() {
-            const items = getCurrentItems();
-            const codes = Object.keys(items);
-            if (codes.length === 0) {
-                showErrorDialog("Export Failed", "There are no items to share, sir.");
-                return;
-            }
-
-            const listName = (appState.lists[appState.activeListId]?.name || "inventory").replace(/[^a-z0-9]/gi, '_').toLowerCase();
-            let csvContent = "barcode,quantity\n";
-            codes.forEach(code => csvContent += `${code},${items[code]}\n`);
-
-            const fileName = `${listName}_${new Date().toISOString().slice(0,10)}.txt`;
-
-            if (navigator.share && navigator.canShare) {
-                const file = new File([csvContent], fileName, { type: 'text/plain' });
-                navigator.share({
-                    title: appState.lists[appState.activeListId]?.name || "Inventory",
-                    text: 'Barcode List',
-                    files: [file]
-                }).catch(console.error);
-            } else {
-                const blob = new Blob([csvContent], { type: 'text/plain;charset=utf-8;' });
-                const link = document.createElement("a");
-                if (link.download !== undefined) {
-                    const url = URL.createObjectURL(blob);
-                    link.setAttribute("href", url);
-                    link.setAttribute("download", fileName);
-                    link.style.visibility = 'hidden';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                }
-            }
+            const items = appState.lists[appState.activeListId]?.items;
+            if (!items || !Object.keys(items).length) return showErrorDialog("Empty List", "Nothing to share yet.");
+            const csv = "Barcode,Qty\n" + Object.entries(items).map(e => e.join(',')).join('\n');
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `ScannerExport_${appState.activeListId}.csv`;
+            a.click();
         }
 
-        function saveToStorage() {
-            localStorage.setItem('scanner_app_data', JSON.stringify(appState));
+        function showErrorDialog(title, msg) {
+            document.getElementById('error-dialog-title').textContent = title;
+            document.getElementById('error-dialog-message').textContent = msg;
+            document.getElementById('error-dialog-overlay').classList.remove('hidden');
         }
 
+        function saveToStorage() { localStorage.setItem('scanner_pro_v2', JSON.stringify(appState)); }
         function loadFromStorage() {
-            const newData = localStorage.getItem('scanner_app_data');
-            const oldData = localStorage.getItem('barcode_inventory');
-
-            if (newData) {
-                try {
-                    appState = JSON.parse(newData);
-                    if(!appState.lists || Object.keys(appState.lists).length === 0) {
-                        createDefaultList();
-                        return;
-                    }
-                    if (!appState.activeListId || !appState.lists[appState.activeListId]) {
-                        const sortedIds = Object.keys(appState.lists).sort((a,b) => 
-                            (appState.lists[b].createdAt || 0) - (appState.lists[a].createdAt || 0)
-                        );
-                        appState.activeListId = sortedIds[0];
-                        saveToStorage();
-                    }
-                } catch(e) { 
-                    createDefaultList(); 
-                }
-            } else if (oldData) {
-                try {
-                    const oldItems = JSON.parse(oldData);
-                    const defaultId = Date.now().toString();
-                    appState = { lists: { [defaultId]: { name: "Default List", items: oldItems, createdAt: Date.now() } }, activeListId: defaultId };
-                    saveToStorage();
-                    localStorage.removeItem('barcode_inventory');
-                } catch(e) { createDefaultList(); }
+            const data = localStorage.getItem('scanner_pro_v2');
+            if (data) {
+                appState = JSON.parse(data);
             } else {
-                createDefaultList();
+                const id = Date.now().toString();
+                appState = { lists: { [id]: { name: "Default List", items: {}, createdAt: Date.now() } }, activeListId: id };
             }
-        }
-
-        function createDefaultList() {
-            const id = Date.now().toString();
-            appState = { lists: { [id]: { name: "My Scans", items: {}, createdAt: Date.now() } }, activeListId: id };
-            saveToStorage();
         }
     </script>
 </body>
