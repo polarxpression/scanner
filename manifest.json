@@ -1,12 +1,16 @@
 {
-  "background_color": "#282828",
-  "dir": "ltr",
-  "display": "standalone",
   "name": "Scanner",
-  "orientation": "any",
-  "scope": "/",
-  "short_name": "scanner",
-  "start_url": "/",
-  "theme_color": "#ff286f",
-  "id": "scanner"
+  "short_name": "Scanner",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#1a1a1a",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='100%25' x2='100%25' y2='0%25'%3E%3Cstop offset='0%25' stop-color='%23f472b6'/%3E%3Cstop offset='100%25' stop-color='%239333ea'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='256' cy='256' r='256' fill='url(%23g)'/%3E%3Cpath fill='%23fff' d='M100 130h40v252h-40zm70 0h30v252h-30zm60 0h50v252h-50zm80 0h30v252h-30zm60 0h42v252h-42z'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
 }
