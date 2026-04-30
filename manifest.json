@@ -1,0 +1,12 @@
+{
+  "background_color": "#282828",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "Scanner",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "scanner",
+  "start_url": "/",
+  "theme_color": "#ff286f",
+  "id": "scanner"
+}
