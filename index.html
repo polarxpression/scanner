@@ -71,7 +71,6 @@
             opacity: 1;
         }
         
-        /* Nav safe area for iOS */
         .pb-safe {
             padding-bottom: env(safe-area-inset-bottom);
         }
@@ -79,24 +78,26 @@
 </head>
 <body class="h-screen flex flex-col relative overflow-hidden selection:bg-pink-500 selection:text-white">
 
+    <!-- Startup Screen -->
     <div id="startup-overlay" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md transition-opacity duration-300">
         <div class="bg-gray-800 p-8 m-4 max-w-sm w-full rounded-[2.5rem] shadow-2xl border border-gray-700 text-center">
             <div class="w-20 h-20 bg-gradient-to-tr from-pink-500 to-purple-600 rounded-3xl mx-auto mb-6 flex items-center justify-center shadow-2xl rotate-3">
                 <i class="fa-solid fa-barcode text-white text-3xl"></i>
             </div>
-            <h2 class="text-2xl font-black text-white mb-2">Bem-vindo(a) de volta</h2>
-            <p class="text-gray-400 text-sm mb-8">Como você gostaria de iniciar sua sessão de leitura hoje?</p>
+            <h2 class="text-2xl font-black text-white mb-2">Scanner Pro</h2>
+            <p class="text-gray-400 text-sm mb-8">Gerencie seu inventário de forma rápida e organizada.</p>
             <div class="space-y-3">
                 <button onclick="handleStartup('continue')" class="w-full bg-pink-500 hover:bg-pink-400 text-white py-4 rounded-2xl font-bold transition flex items-center justify-center gap-3">
                     <i class="fa-solid fa-rotate-left"></i> Continuar Última Lista
                 </button>
                 <button onclick="handleStartup('new')" class="w-full bg-gray-700 hover:bg-gray-600 text-white py-4 rounded-2xl font-bold transition">
-                    Iniciar Nova Coleção
+                    + Iniciar Nova Coleção
                 </button>
             </div>
         </div>
     </div>
 
+    <!-- Error Dialog -->
     <div id="error-dialog-overlay" class="fixed inset-0 z-[110] hidden flex items-center justify-center bg-black/80 backdrop-blur-sm">
         <div class="bg-gray-800 p-6 m-4 max-w-sm w-full rounded-3xl shadow-2xl border-2 border-red-500/50">
             <div class="flex items-center mb-4">
@@ -108,51 +109,26 @@
         </div>
     </div>
 
-    <div id="lists-overlay" class="absolute inset-0 z-50 hidden flex flex-col p-6 transition-all duration-300 backdrop-blur-xl bg-black/80">
+    <!-- Collections Menu -->
+    <div id="lists-overlay" class="absolute inset-0 z-50 hidden flex flex-col p-6 transition-all duration-300 backdrop-blur-xl bg-black/90">
         <div class="flex justify-between items-center mb-8 pt-4">
-            <h2 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500">Coleções</h2>
-            <button onclick="toggleListsMenu()" class="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition">
+            <h2 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500" id="lists-title">Coleções</h2>
+            <button id="close-lists-btn" onclick="toggleListsMenu()" class="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition">
                 <i class="fa-solid fa-xmark text-xl"></i>
             </button>
         </div>
-        <div class="bg-gray-900 p-2 rounded-full border border-gray-700 flex items-center mb-6">
-            <input type="text" id="new-list-name" placeholder="Nome da lista..." class="flex-1 bg-transparent border-none text-white px-4 py-2 focus:outline-none placeholder-gray-500 font-semibold">
+        
+        <div class="bg-gray-900 p-2 rounded-full border-2 border-gray-700 flex items-center mb-6 focus-within:border-pink-500 transition-colors">
+            <input type="text" id="new-list-name" placeholder="Nome da nova lista..." class="flex-1 bg-transparent border-none text-white px-4 py-2 focus:outline-none placeholder-gray-500 font-semibold">
             <button onclick="createNewList()" class="bg-pink-500 hover:bg-pink-400 text-white w-10 h-10 rounded-full flex items-center justify-center transition shadow-lg shadow-pink-500/30">
                 <i class="fa-solid fa-plus"></i>
             </button>
         </div>
+
         <div id="lists-container" class="flex-1 overflow-y-auto space-y-3 pb-10"></div>
     </div>
 
-    <div id="settings-overlay" class="absolute inset-0 z-50 hidden flex flex-col p-6 transition-all duration-300 backdrop-blur-xl bg-black/80">
-        <div class="flex justify-between items-center mb-8 pt-4">
-            <h2 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500">Configurações</h2>
-            <button onclick="toggleSettingsMenu()" class="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition">
-                <i class="fa-solid fa-xmark text-xl"></i>
-            </button>
-        </div>
-        <div class="flex-1 overflow-y-auto space-y-4">
-            <div class="bg-gray-900 p-5 rounded-3xl border border-gray-700">
-                <label class="block text-gray-400 font-bold mb-3 uppercase tracking-wider text-xs">FPS da Câmera</label>
-                <select id="config-fps" onchange="saveSettings()" class="w-full bg-gray-800 text-white font-bold rounded-xl p-4 focus:outline-none border border-gray-700 appearance-none">
-                    <option value="60">60 FPS</option>
-                    <option value="30">30 FPS (Padrão)</option>
-                    <option value="24">24 FPS</option>
-                    <option value="15">15 FPS</option>
-                </select>
-            </div>
-            
-            <div class="bg-gray-900 p-5 rounded-3xl border border-gray-700">
-                <label class="block text-gray-400 font-bold mb-3 uppercase tracking-wider text-xs">Intervalo de Leitura (ms)</label>
-                <div class="flex gap-4 items-center">
-                    <input type="number" id="config-delay" onchange="saveSettings()" class="w-full bg-gray-800 text-white font-bold rounded-xl p-4 focus:outline-none border border-gray-700" placeholder="2000">
-                    <span class="text-gray-500 font-black">ms</span>
-                </div>
-                <p class="text-[10px] text-gray-500 mt-2">Tempo de espera antes que um novo código possa ser lido com sucesso (Padrão: 2000ms).</p>
-            </div>
-        </div>
-    </div>
-
+    <!-- Header -->
     <div class="px-4 pt-4 pb-2 z-20">
         <header class="glass-panel rounded-3xl p-3 px-5 flex justify-between items-center shadow-xl">
             <div class="flex items-center gap-3">
@@ -162,15 +138,16 @@
                 <h1 class="text-lg font-bold">Scanner</h1>
             </div>
             <button onclick="exportData()" class="bg-pink-500/10 hover:bg-pink-500/20 text-pink-500 px-4 py-2 rounded-full text-xs font-bold transition flex items-center gap-2 border border-pink-500/30">
-                <i class="fa-solid fa-share-nodes"></i> Compartilhar
+                <i class="fa-solid fa-share-nodes"></i> Exportar
             </button>
         </header>
     </div>
 
+    <!-- Main Content -->
     <main class="flex-1 overflow-y-auto p-4 space-y-6 pb-28">
         <div class="flex justify-between items-center px-2">
             <div class="max-w-[60%]">
-                <div class="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Lista Atual</div>
+                <div class="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Lista Ativa</div>
                 <div id="current-list-display" class="text-2xl font-black text-white truncate">...</div>
             </div>
             <div class="bg-gray-800/50 px-4 py-2 rounded-2xl border border-gray-800 shadow-inner">
@@ -178,43 +155,49 @@
             </div>
         </div>
 
+        <!-- Scanner Viewport -->
         <div class="bg-[#1e1e1e] p-3 rounded-[2.5rem] shadow-2xl border border-white/5 relative group">
             <div id="reader" onclick="focusCamera(event)" class="min-h-[280px] relative"></div>
             <div id="focus-ring" class="focus-ring"></div>
             
-            <button id="torch-btn" onclick="toggleTorch()" class="absolute top-6 right-6 z-20 w-12 h-12 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white hidden flex items-center justify-center transition active:scale-90 shadow-lg">
-                <i class="fa-solid fa-bolt text-xl"></i>
+            <!-- Flashlight Toggle -->
+            <button id="torch-btn" onclick="toggleTorch()" class="absolute top-6 right-6 z-20 w-12 h-12 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white hidden items-center justify-center transition active:scale-90 shadow-xl">
+                <i id="torch-icon" class="fa-solid fa-bolt-slash text-xl"></i>
             </button>
 
             <div class="absolute bottom-6 left-0 right-0 flex justify-center z-10 px-6 gap-3">
                 <button id="start-btn" onclick="startScanner()" class="flex-1 bg-white text-black py-4 rounded-2xl font-black text-sm transition shadow-xl active:scale-95">
-                    <i class="fa-solid fa-camera mr-2"></i> ABRIR CÂMERA
+                    <i class="fa-solid fa-camera mr-2"></i> INICIAR CÂMERA
                 </button>
                 <button id="stop-btn" onclick="stopScanner()" class="hidden flex-1 bg-red-500 text-white py-4 rounded-2xl font-black text-sm transition shadow-xl active:scale-95">
-                    <i class="fa-solid fa-stop mr-2"></i> FECHAR
+                    <i class="fa-solid fa-stop mr-2"></i> PARAR
                 </button>
             </div>
         </div>
 
+        <!-- Feedback Notification -->
         <div id="feedback" class="hidden glass-panel border border-pink-500/30 text-pink-400 px-6 py-4 rounded-2xl text-center font-bold shadow-xl animate-bounce">
-            <i class="fa-solid fa-check-circle mr-2"></i> <span id="feedback-text">Código adicionado!</span>
+            <i class="fa-solid fa-circle-info mr-2"></i> <span id="feedback-text">Notificação</span>
         </div>
 
+        <!-- Manual Entry -->
         <div class="bg-gray-800/40 p-2 rounded-2xl flex border border-gray-700/50 shadow-inner">
-            <input type="text" id="manual-code" placeholder="Inserir código de barras manualmente..." class="flex-1 bg-transparent border-none text-white px-4 py-2 text-sm focus:outline-none font-semibold">
+            <input type="text" id="manual-code" placeholder="Digitar código manualmente..." class="flex-1 bg-transparent border-none text-white px-4 py-2 text-sm focus:outline-none font-semibold">
             <button onclick="addManual()" class="bg-gray-700 hover:bg-pink-500 text-white w-10 h-10 rounded-xl flex items-center justify-center transition shadow-md">
                 <i class="fa-solid fa-plus"></i>
             </button>
         </div>
 
+        <!-- Inventory List -->
         <div id="inventory-list" class="space-y-3">
             <div class="text-center text-gray-600 py-12" id="empty-state">
                 <i class="fa-solid fa-box-open text-4xl mb-4 opacity-10"></i>
-                <p class="font-bold text-xs uppercase tracking-widest">Inventário vazio</p>
+                <p class="font-bold text-xs uppercase tracking-widest">Nenhum item lido</p>
             </div>
         </div>
     </main>
 
+    <!-- Bottom Navigation -->
     <nav class="fixed bottom-0 left-0 right-0 bg-gray-900/90 backdrop-blur-xl border-t border-gray-800 z-40 pb-safe shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
         <div class="flex justify-around items-center p-2 px-4 h-16">
             <button onclick="toggleListsMenu()" class="flex flex-col items-center justify-center w-full text-gray-400 hover:text-pink-500 transition active:scale-95">
@@ -222,23 +205,19 @@
                 <span class="text-[10px] font-bold uppercase tracking-wider">Coleções</span>
             </button>
             <div class="w-px h-8 bg-gray-800 mx-2"></div>
-            <button onclick="toggleSettingsMenu()" class="flex flex-col items-center justify-center w-full text-gray-400 hover:text-pink-500 transition active:scale-95">
-                <i class="fa-solid fa-gear text-xl mb-1"></i>
-                <span class="text-[10px] font-bold uppercase tracking-wider">Configurações</span>
+            <button class="flex flex-col items-center justify-center w-full text-gray-600 cursor-not-allowed">
+                <i class="fa-solid fa-chart-simple text-xl mb-1"></i>
+                <span class="text-[10px] font-bold uppercase tracking-wider">Stats</span>
             </button>
         </div>
     </nav>
 
     <script>
-        let appState = { 
-            lists: {}, 
-            activeListId: null,
-            settings: { fps: 30, scanDelay: 2000 }
-        };
+        let appState = { lists: {}, activeListId: null };
         let html5QrScanner = null;
         let isScanning = false;
         let torchActive = false;
-        let lastScannedTime = 0;
+        let isForceNewList = false;
 
         document.addEventListener('DOMContentLoaded', () => {
             loadFromStorage();
@@ -248,16 +227,24 @@
             document.getElementById('startup-overlay').classList.add('opacity-0');
             setTimeout(() => {
                 document.getElementById('startup-overlay').classList.add('hidden');
+                
+                if (choice === 'new') {
+                    // Force the creation of a new list
+                    isForceNewList = true;
+                    const overlay = document.getElementById('lists-overlay');
+                    overlay.classList.remove('hidden');
+                    
+                    // Hide the close button and the existing list container
+                    document.getElementById('close-lists-btn').classList.add('hidden');
+                    document.getElementById('lists-container').classList.add('hidden');
+                    document.getElementById('lists-title').textContent = "Nova Coleção";
+                    
+                    document.getElementById('new-list-name').focus();
+                } else {
+                    renderList();
+                    updateListDisplay();
+                }
             }, 300);
-
-            if (choice === 'new') {
-                const newId = Date.now().toString();
-                appState.lists[newId] = { name: "Coleção " + new Date().toLocaleDateString('pt-BR'), items: {}, createdAt: Date.now() };
-                appState.activeListId = newId;
-                saveToStorage();
-            }
-            renderList();
-            updateListDisplay();
         }
 
         function validateEAN13(code) {
@@ -274,37 +261,22 @@
             try {
                 if (!html5QrScanner) html5QrScanner = new Html5Qrcode("reader");
                 
-                const targetFps = parseInt(appState.settings.fps) || 30;
-                
-                let config = { 
-                    fps: targetFps, 
-                    qrbox: { width: 250, height: 250 },
-                    formatsToSupport: [ Html5QrcodeSupportedFormats.EAN_13 ]
-                };
-
-                try {
-                    // Tenta iniciar com o FPS da configuração
-                    await html5QrScanner.start({ facingMode: "environment" }, config, onScanSuccess);
-                } catch (fpsError) {
-                    // Fallback para 24 FPS se 30 (ou maior) falhar
-                    if (targetFps > 24) {
-                        console.warn("Falha ao iniciar com", targetFps, "FPS. Tentando 24 FPS.");
-                        config.fps = 24;
-                        await html5QrScanner.start({ facingMode: "environment" }, config, onScanSuccess);
-                    } else {
-                        throw fpsError;
-                    }
-                }
+                await html5QrScanner.start(
+                    { facingMode: "environment" },
+                    { fps: 30, qrbox: { width: 250, height: 250 } },
+                    onScanSuccess
+                );
                 
                 isScanning = true;
                 updateScannerUI(true);
                 
-                const capabilities = html5QrScanner.getRunningTrackCapabilities();
-                if (capabilities && capabilities.torch) {
-                    document.getElementById('torch-btn').classList.remove('hidden');
-                }
+                // Show the torch button explicitly when scanning starts
+                const torchBtn = document.getElementById('torch-btn');
+                torchBtn.classList.remove('hidden');
+                torchBtn.classList.add('flex');
+                
             } catch (err) {
-                showErrorDialog("Erro na Câmera", "Certifique-se de que as permissões da câmera estão ativadas e que o dispositivo suporta a resolução exigida.");
+                showErrorDialog("Erro na Câmera", "Não foi possível acessar a câmera. Verifique as permissões do navegador.");
                 console.error(err);
             }
         }
@@ -315,8 +287,11 @@
                 isScanning = false;
                 torchActive = false;
                 updateScannerUI(false);
-                document.getElementById('torch-btn').classList.add('hidden');
-                document.getElementById('torch-btn').classList.remove('bg-yellow-500', 'text-black');
+                
+                const torchBtn = document.getElementById('torch-btn');
+                torchBtn.classList.add('hidden');
+                torchBtn.classList.remove('flex');
+                updateTorchUI(false);
             }
         }
 
@@ -327,11 +302,27 @@
                 await html5QrScanner.applyVideoConstraints({
                     advanced: [{ torch: torchActive }]
                 });
-                const btn = document.getElementById('torch-btn');
-                btn.classList.toggle('bg-yellow-500', torchActive);
-                btn.classList.toggle('text-black', torchActive);
+                updateTorchUI(torchActive);
             } catch (e) {
-                console.error("Erro na lanterna", e);
+                console.error("Flashlight error", e);
+                torchActive = !torchActive; // Revert
+                showFeedback("A lanterna não é suportada neste navegador/dispositivo.");
+            }
+        }
+
+        function updateTorchUI(isActive) {
+            const btn = document.getElementById('torch-btn');
+            const icon = document.getElementById('torch-icon');
+            if (isActive) {
+                btn.classList.add('bg-yellow-500', 'text-black', 'border-yellow-400');
+                btn.classList.remove('bg-black/60', 'text-white', 'border-white/10');
+                icon.classList.remove('fa-bolt-slash');
+                icon.classList.add('fa-bolt');
+            } else {
+                btn.classList.remove('bg-yellow-500', 'text-black', 'border-yellow-400');
+                btn.classList.add('bg-black/60', 'text-white', 'border-white/10');
+                icon.classList.add('fa-bolt-slash');
+                icon.classList.remove('fa-bolt');
             }
         }
 
@@ -347,24 +338,9 @@
             ring.classList.add('active');
             
             setTimeout(() => ring.classList.remove('active'), 600);
-
-            if (html5QrScanner) {
-                html5QrScanner.applyVideoConstraints({
-                    advanced: [{ focusMode: "continuous" }, { focusMode: "manual" }]
-                }).catch(() => {});
-            }
         }
 
         function onScanSuccess(code) {
-            if (!validateEAN13(code)) return;
-
-            // Lógica de cooldown / atraso
-            const now = Date.now();
-            const delay = parseInt(appState.settings.scanDelay) || 2000;
-            if (now - lastScannedTime < delay) return;
-            
-            lastScannedTime = now;
-            
             const reader = document.getElementById('reader');
             reader.classList.add('scan-flash');
             setTimeout(() => reader.classList.remove('scan-flash'), 400);
@@ -377,10 +353,10 @@
             const list = appState.lists[appState.activeListId];
             if (list.items[code]) {
                 list.items[code]++;
-                showFeedback(`+1 Unidade: ${code}`);
+                showFeedback(`Adicionado: ${code} (x${list.items[code]})`);
             } else {
                 list.items[code] = 1;
-                showFeedback(`Lido: ${code}`);
+                showFeedback(`Novo Item: ${code}`);
             }
             saveToStorage();
             renderList();
@@ -401,7 +377,10 @@
             const items = appState.lists[appState.activeListId]?.items || {};
             const codes = Object.keys(items).reverse();
 
-            Array.from(container.children).forEach(c => { if(c.id !== 'empty-state') c.remove(); });
+            // Clear previous items but keep empty state
+            Array.from(container.children).forEach(c => {
+                if(c.id !== 'empty-state') c.remove();
+            });
             
             empty.style.display = codes.length ? 'none' : 'block';
             document.getElementById('total-count').textContent = codes.length;
@@ -411,8 +390,8 @@
                 el.className = "bg-gray-800/40 p-4 rounded-3xl flex justify-between items-center border border-white/5 shadow-sm";
                 el.innerHTML = `
                     <div class="overflow-hidden">
-                        <div class="font-mono font-bold text-white tracking-wider truncate w-36 sm:w-48">${code}</div>
-                        <div class="text-[9px] text-gray-500 font-black uppercase tracking-widest">${validateEAN13(code) ? 'EAN-13 Verificado' : 'Entrada Manual'}</div>
+                        <div class="font-mono font-bold text-white tracking-wider truncate w-40">${code}</div>
+                        <div class="text-[9px] text-gray-500 font-black uppercase tracking-widest">${validateEAN13(code) ? 'EAN-13' : 'Manual'}</div>
                     </div>
                     <div class="flex items-center gap-3">
                         <div class="flex items-center bg-black/30 rounded-2xl p-1 border border-gray-700/50">
@@ -440,36 +419,40 @@
         }
 
         function toggleListsMenu() {
+            if (isForceNewList) return; // Disallow closing if they haven't created a list yet.
+            
             const overlay = document.getElementById('lists-overlay');
             overlay.classList.toggle('hidden');
             if (!overlay.classList.contains('hidden')) renderListsMenu();
         }
 
-        function toggleSettingsMenu() {
-            const overlay = document.getElementById('settings-overlay');
-            overlay.classList.toggle('hidden');
-            if (!overlay.classList.contains('hidden')) {
-                document.getElementById('config-fps').value = appState.settings.fps || 30;
-                document.getElementById('config-delay').value = appState.settings.scanDelay || 2000;
-            }
-        }
-
-        function saveSettings() {
-            appState.settings.fps = document.getElementById('config-fps').value;
-            appState.settings.scanDelay = document.getElementById('config-delay').value;
-            saveToStorage();
-        }
-
         function createNewList() {
-            const name = document.getElementById('new-list-name').value.trim() || "Minha Coleção";
+            const input = document.getElementById('new-list-name');
+            const name = input.value.trim();
+            
+            if (!name) {
+                input.parentElement.classList.add('border-red-500');
+                setTimeout(() => input.parentElement.classList.remove('border-red-500'), 1000);
+                return;
+            }
+
             const id = Date.now().toString();
             appState.lists[id] = { name, items: {}, createdAt: Date.now() };
             appState.activeListId = id;
+            input.value = '';
             saveToStorage();
-            toggleListsMenu();
+            
+            // Release the "forced" state
+            isForceNewList = false;
+            document.getElementById('close-lists-btn').classList.remove('hidden');
+            document.getElementById('lists-container').classList.remove('hidden');
+            document.getElementById('lists-title').textContent = "Coleções";
+            
+            const overlay = document.getElementById('lists-overlay');
+            overlay.classList.add('hidden');
+            
             renderList();
             updateListDisplay();
-            document.getElementById('new-list-name').value = '';
         }
 
         function switchList(id) {
@@ -477,7 +460,7 @@
             saveToStorage();
             renderList();
             updateListDisplay();
-            toggleListsMenu();
+            toggleListsMenu(); // Hides menu normally
         }
 
         function renderListsMenu() {
@@ -487,448 +470,7 @@
                 const list = appState.lists[id];
                 const active = id === appState.activeListId;
                 const el = document.createElement('div');
-                el.className = `p-4 rounded-3xl cursor-pointer flex justify-between items-center border-2 transition ${active ? 'bg-pink-500/10 border-pink-500' : 'bg-gray-900 border-transparent'}`;
-                el.onclick = () => switchList(id);
-                el.innerHTML = `
-                    <div class="font-bold ${active ? 'text-white' : 'text-gray-400'}">${list.name}</div>
-                    <div class="text-xs font-black text-pink-500">${Object.keys(list.items).length} Itens</div>
-                `;
-                container.appendChild(el);
-            });
-        }
-
-        function updateListDisplay() {
-            document.getElementById('current-list-display').textContent = appState.lists[appState.activeListId]?.name || "Selecione uma Lista";
-        }
-
-        function showFeedback(msg) {
-            const f = document.getElementById('feedback');
-            document.getElementById('feedback-text').textContent = msg;
-            f.classList.remove('hidden');
-            setTimeout(() => f.classList.add('hidden'), 2000);
-        }
-
-        function exportData() {
-            const items = appState.lists[appState.activeListId]?.items;
-            if (!items || !Object.keys(items).length) return showErrorDialog("Lista Vazia", "Não há itens para compartilhar no momento.");
-            const csv = "Codigo_Barras,Quantidade\n" + Object.entries(items).map(e => e.join(',')).join('\n');
-            const blob = new Blob([csv], { type: 'text/csv' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `ScannerExport_${appState.activeListId}.csv`;
-            a.click();
-        }
-
-        function showErrorDialog(title, msg) {
-            document.getElementById('error-dialog-title').textContent = title;
-            document.getElementById('error-dialog-message').textContent = msg;
-            document.getElementById('error-dialog-overlay').classList.remove('hidden');
-        }
-
-        function saveToStorage() { localStorage.setItem('scanner_pro_v3', JSON.stringify(appState)); }
-        function loadFromStorage() {
-            const data = localStorage.getItem('scanner_pro_v3');
-            if (data) {
-                appState = JSON.parse(data);
-                if (!appState.settings) {
-                    appState.settings = { fps: 30, scanDelay: 2000 };
-                    saveToStorage();
-                }
-            } else {
-                const id = Date.now().toString();
-                appState = { 
-                    lists: { [id]: { name: "Lista Padrão", items: {}, createdAt: Date.now() } }, 
-                    activeListId: id,
-                    settings: { fps: 30, scanDelay: 2000 }
-                };
-            }
-        }
-    </script>
-</body>
-</html>
-
-
-```
-        #reader__dashboard_section_swaplink {
-            display: none !important;
-        }
-
-        .scan-flash {
-            animation: flashAnimation 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        @keyframes flashAnimation {
-            0% { background-color: rgba(236, 72, 153, 0.6); }
-            100% { background-color: transparent; }
-        }
-
-        .glass-panel {
-            background: rgba(40, 40, 40, 0.7);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .fab {
-            box-shadow: 0 10px 25px -5px rgba(236, 72, 153, 0.5);
-        }
-
-        /* Custom focus ring animation */
-        .focus-ring {
-            position: absolute;
-            width: 80px;
-            height: 80px;
-            border: 2px solid #ec4899;
-            border-radius: 50%;
-            pointer-events: none;
-            transform: translate(-50%, -50%) scale(2);
-            opacity: 0;
-            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
-            z-index: 50;
-        }
-        .focus-ring.active {
-            transform: translate(-50%, -50%) scale(1);
-            opacity: 1;
-        }
-    </style>
-</head>
-<body class="h-screen flex flex-col relative overflow-hidden selection:bg-pink-500 selection:text-white">
-
-    <!-- Startup Dialog -->
-    <div id="startup-overlay" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-md transition-opacity duration-300">
-        <div class="bg-gray-800 p-8 m-4 max-w-sm w-full rounded-[2.5rem] shadow-2xl border border-gray-700 text-center">
-            <div class="w-20 h-20 bg-gradient-to-tr from-pink-500 to-purple-600 rounded-3xl mx-auto mb-6 flex items-center justify-center shadow-2xl rotate-3">
-                <i class="fa-solid fa-barcode text-white text-3xl"></i>
-            </div>
-            <h2 class="text-2xl font-black text-white mb-2">Welcome Back</h2>
-            <p class="text-gray-400 text-sm mb-8">How would you like to begin your scanning session today?</p>
-            <div class="space-y-3">
-                <button onclick="handleStartup('continue')" class="w-full bg-pink-500 hover:bg-pink-400 text-white py-4 rounded-2xl font-bold transition flex items-center justify-center gap-3">
-                    <i class="fa-solid fa-rotate-left"></i> Continue Last List
-                </button>
-                <button onclick="handleStartup('new')" class="w-full bg-gray-700 hover:bg-gray-600 text-white py-4 rounded-2xl font-bold transition">
-                    Start New Collection
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Error Dialog -->
-    <div id="error-dialog-overlay" class="fixed inset-0 z-[110] hidden flex items-center justify-center bg-black/80 backdrop-blur-sm">
-        <div class="bg-gray-800 p-6 m-4 max-w-sm w-full rounded-3xl shadow-2xl border-2 border-red-500/50">
-            <div class="flex items-center mb-4">
-                <i class="fa-solid fa-triangle-exclamation text-3xl text-red-500 mr-3"></i>
-                <h3 class="text-xl font-extrabold text-red-400" id="error-dialog-title">Alert</h3>
-            </div>
-            <p class="text-gray-300 text-sm mb-6" id="error-dialog-message"></p>
-            <button onclick="document.getElementById('error-dialog-overlay').classList.add('hidden')" class="w-full bg-red-500 hover:bg-red-400 text-white py-3 rounded-xl font-bold transition">Dismiss</button>
-        </div>
-    </div>
-
-    <!-- Lists Overlay -->
-    <div id="lists-overlay" class="absolute inset-0 z-50 hidden flex flex-col p-6 transition-all duration-300 backdrop-blur-xl bg-black/80">
-        <div class="flex justify-between items-center mb-8">
-            <h2 class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500">Collections</h2>
-            <button onclick="toggleListsMenu()" class="w-12 h-12 rounded-full bg-gray-800 flex items-center justify-center hover:bg-gray-700 transition">
-                <i class="fa-solid fa-xmark text-xl"></i>
-            </button>
-        </div>
-        <div class="bg-gray-900 p-2 rounded-full border border-gray-700 flex items-center mb-6">
-            <input type="text" id="new-list-name" placeholder="List name..." class="flex-1 bg-transparent border-none text-white px-4 py-2 focus:outline-none placeholder-gray-500 font-semibold">
-            <button onclick="createNewList()" class="bg-pink-500 hover:bg-pink-400 text-white w-10 h-10 rounded-full flex items-center justify-center transition shadow-lg shadow-pink-500/30">
-                <i class="fa-solid fa-plus"></i>
-            </button>
-        </div>
-        <div id="lists-container" class="flex-1 overflow-y-auto space-y-3"></div>
-    </div>
-
-    <!-- Main UI -->
-    <div class="px-4 pt-4 pb-2 z-20">
-        <header class="glass-panel rounded-3xl p-3 px-5 flex justify-between items-center shadow-xl">
-            <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-lg bg-pink-500 flex items-center justify-center">
-                    <i class="fa-solid fa-barcode text-white text-xs"></i>
-                </div>
-                <h1 class="text-lg font-bold">Scanner</h1>
-            </div>
-            <button onclick="exportData()" class="bg-pink-500/10 hover:bg-pink-500/20 text-pink-500 px-4 py-2 rounded-full text-xs font-bold transition flex items-center gap-2 border border-pink-500/30">
-                <i class="fa-solid fa-share-nodes"></i> Share
-            </button>
-        </header>
-    </div>
-
-    <main class="flex-1 overflow-y-auto p-4 space-y-6">
-        <div class="flex justify-between items-center px-2">
-            <div class="max-w-[60%]">
-                <div class="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Active List</div>
-                <div id="current-list-display" class="text-2xl font-black text-white truncate">...</div>
-            </div>
-            <div class="bg-gray-800/50 px-4 py-2 rounded-2xl border border-gray-800">
-                <span id="total-count" class="font-mono font-bold text-pink-400 text-xl">0</span>
-            </div>
-        </div>
-
-        <div class="bg-[#1e1e1e] p-3 rounded-[2.5rem] shadow-2xl border border-white/5 relative group">
-            <div id="reader" onclick="focusCamera(event)" class="min-h-[280px] relative"></div>
-            <div id="focus-ring" class="focus-ring"></div>
-            
-            <!-- Floating Flashlight Toggle -->
-            <button id="torch-btn" onclick="toggleTorch()" class="absolute top-6 right-6 z-20 w-12 h-12 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white hidden flex items-center justify-center transition active:scale-90">
-                <i class="fa-solid fa-bolt-auto"></i>
-            </button>
-
-            <div class="absolute bottom-6 left-0 right-0 flex justify-center z-10 px-6 gap-3">
-                <button id="start-btn" onclick="startScanner()" class="flex-1 bg-white text-black py-4 rounded-2xl font-black text-sm transition shadow-xl active:scale-95">
-                    <i class="fa-solid fa-camera mr-2"></i> OPEN CAMERA
-                </button>
-                <button id="stop-btn" onclick="stopScanner()" class="hidden flex-1 bg-red-500 text-white py-4 rounded-2xl font-black text-sm transition shadow-xl active:scale-95">
-                    <i class="fa-solid fa-stop mr-2"></i> CLOSE
-                </button>
-            </div>
-        </div>
-
-        <div id="feedback" class="hidden glass-panel text-pink-400 px-6 py-4 rounded-2xl text-center font-bold shadow-xl animate-bounce">
-            <i class="fa-solid fa-check-circle mr-2"></i> <span id="feedback-text">Code added!</span>
-        </div>
-
-        <div class="bg-gray-800/40 p-2 rounded-2xl flex border border-gray-700/50">
-            <input type="text" id="manual-code" placeholder="Enter barcode manually..." class="flex-1 bg-transparent border-none text-white px-4 py-2 text-sm focus:outline-none font-semibold">
-            <button onclick="addManual()" class="bg-gray-700 hover:bg-pink-500 text-white w-10 h-10 rounded-xl flex items-center justify-center transition">
-                <i class="fa-solid fa-plus"></i>
-            </button>
-        </div>
-
-        <div id="inventory-list" class="space-y-3 pb-32">
-            <div class="text-center text-gray-600 py-12" id="empty-state">
-                <i class="fa-solid fa-box-open text-4xl mb-4 opacity-10"></i>
-                <p class="font-bold text-xs uppercase tracking-widest">Inventory empty</p>
-            </div>
-        </div>
-    </main>
-
-    <!-- FLOATING ACTION BUTTON FOR LISTS -->
-    <button onclick="toggleListsMenu()" class="fab fixed bottom-8 right-6 w-16 h-16 rounded-2xl bg-gradient-to-tr from-pink-500 to-purple-600 text-white shadow-2xl flex items-center justify-center z-40 transition transform hover:scale-110 active:scale-90">
-        <i class="fa-solid fa-layer-group text-2xl"></i>
-    </button>
-
-    <script>
-        let appState = { lists: {}, activeListId: null };
-        let html5QrScanner = null;
-        let isScanning = false;
-        let torchActive = false;
-
-        // Initialization logic
-        document.addEventListener('DOMContentLoaded', () => {
-            loadFromStorage();
-        });
-
-        function handleStartup(choice) {
-            document.getElementById('startup-overlay').classList.add('opacity-0');
-            setTimeout(() => {
-                document.getElementById('startup-overlay').classList.add('hidden');
-            }, 300);
-
-            if (choice === 'new') {
-                const newId = Date.now().toString();
-                appState.lists[newId] = { name: "New Collection " + new Date().toLocaleDateString(), items: {}, createdAt: Date.now() };
-                appState.activeListId = newId;
-                saveToStorage();
-            }
-            renderList();
-            updateListDisplay();
-        }
-
-        function validateEAN13(code) {
-            if (!/^\d{13}$/.test(code)) return false;
-            let sum = 0;
-            for (let i = 0; i < 12; i++) {
-                sum += parseInt(code[i]) * (i % 2 === 0 ? 1 : 3);
-            }
-            const check = (10 - (sum % 10)) % 10;
-            return check === parseInt(code[12]);
-        }
-
-        async function startScanner() {
-            try {
-                if (!html5QrScanner) html5QrScanner = new Html5Qrcode("reader");
-                const config = { 
-                    fps: 15, 
-                    qrbox: { width: 250, height: 250 },
-                    formatsToSupport: [ Html5QrcodeSupportedFormats.EAN_13 ]
-                };
-                await html5QrScanner.start({ facingMode: "environment" }, config, onScanSuccess);
-                isScanning = true;
-                updateScannerUI(true);
-                
-                // Show torch button if supported
-                const capabilities = html5QrScanner.getRunningTrackCapabilities();
-                if (capabilities.torch) {
-                    document.getElementById('torch-btn').classList.remove('hidden');
-                }
-            } catch (err) {
-                showErrorDialog("Camera Error", "Ensure camera permissions are enabled.");
-            }
-        }
-
-        async function stopScanner() {
-            if (html5QrScanner && isScanning) {
-                await html5QrScanner.stop();
-                isScanning = false;
-                torchActive = false;
-                updateScannerUI(false);
-                document.getElementById('torch-btn').classList.add('hidden');
-            }
-        }
-
-        async function toggleTorch() {
-            if (!isScanning) return;
-            try {
-                torchActive = !torchActive;
-                await html5QrScanner.applyVideoConstraints({
-                    advanced: [{ torch: torchActive }]
-                });
-                const btn = document.getElementById('torch-btn');
-                btn.classList.toggle('bg-yellow-500', torchActive);
-                btn.classList.toggle('text-black', torchActive);
-            } catch (e) {
-                console.error("Torch error", e);
-            }
-        }
-
-        function focusCamera(e) {
-            if (!isScanning) return;
-            const ring = document.getElementById('focus-ring');
-            const rect = document.getElementById('reader').getBoundingClientRect();
-            const x = e.clientX - rect.left;
-            const y = e.clientY - rect.top;
-
-            ring.style.left = `${x}px`;
-            ring.style.top = `${y}px`;
-            ring.classList.add('active');
-            
-            setTimeout(() => ring.classList.remove('active'), 600);
-
-            // Attempt to trigger auto-focus if browser supports it via constraints
-            if (html5QrScanner) {
-                html5QrScanner.applyVideoConstraints({
-                    advanced: [{ focusMode: "continuous" }, { focusMode: "manual" }]
-                }).catch(() => {});
-            }
-        }
-
-        function onScanSuccess(code) {
-            if (!validateEAN13(code)) return;
-            
-            const reader = document.getElementById('reader');
-            reader.classList.add('scan-flash');
-            setTimeout(() => reader.classList.remove('scan-flash'), 400);
-
-            if (navigator.vibrate) navigator.vibrate(100);
-            handleItemAdd(code);
-        }
-
-        function handleItemAdd(code) {
-            const list = appState.lists[appState.activeListId];
-            if (list.items[code]) {
-                list.items[code]++;
-                showFeedback(`+1 Count: ${code}`);
-            } else {
-                list.items[code] = 1;
-                showFeedback(`Added: ${code}`);
-            }
-            saveToStorage();
-            renderList();
-        }
-
-        function addManual() {
-            const input = document.getElementById('manual-code');
-            const code = input.value.trim();
-            if (code) {
-                handleItemAdd(code);
-                input.value = '';
-            }
-        }
-
-        function renderList() {
-            const container = document.getElementById('inventory-list');
-            const empty = document.getElementById('empty-state');
-            const items = appState.lists[appState.activeListId]?.items || {};
-            const codes = Object.keys(items).reverse();
-
-            // Clear previous
-            Array.from(container.children).forEach(c => { if(c.id !== 'empty-state') c.remove(); });
-            
-            empty.style.display = codes.length ? 'none' : 'block';
-            document.getElementById('total-count').textContent = codes.length;
-
-            codes.forEach(code => {
-                const el = document.createElement('div');
-                el.className = "bg-gray-800/40 p-4 rounded-3xl flex justify-between items-center border border-white/5";
-                el.innerHTML = `
-                    <div class="overflow-hidden">
-                        <div class="font-mono font-bold text-white tracking-wider truncate w-40">${code}</div>
-                        <div class="text-[9px] text-gray-500 font-black uppercase">${validateEAN13(code) ? 'EAN-13 Verified' : 'Manual Entry'}</div>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <div class="flex items-center bg-black/30 rounded-2xl p-1">
-                            <button onclick="updateQty('${code}', -1)" class="w-8 h-8 rounded-xl bg-gray-700 text-white font-bold">-</button>
-                            <span class="w-10 text-center font-bold text-pink-500">${items[code]}</span>
-                            <button onclick="updateQty('${code}', 1)" class="w-8 h-8 rounded-xl bg-gray-700 text-white font-bold">+</button>
-                        </div>
-                    </div>
-                `;
-                container.insertBefore(el, empty);
-            });
-        }
-
-        function updateQty(code, delta) {
-            const items = appState.lists[appState.activeListId].items;
-            items[code] += delta;
-            if (items[code] <= 0) delete items[code];
-            saveToStorage();
-            renderList();
-        }
-
-        function updateScannerUI(active) {
-            document.getElementById('start-btn').classList.toggle('hidden', active);
-            document.getElementById('stop-btn').classList.toggle('hidden', !active);
-        }
-
-        function toggleListsMenu() {
-            const overlay = document.getElementById('lists-overlay');
-            overlay.classList.toggle('hidden');
-            if (!overlay.classList.contains('hidden')) renderListsMenu();
-        }
-
-        function createNewList() {
-            const name = document.getElementById('new-list-name').value.trim() || "My Collection";
-            const id = Date.now().toString();
-            appState.lists[id] = { name, items: {}, createdAt: Date.now() };
-            appState.activeListId = id;
-            saveToStorage();
-            toggleListsMenu();
-            renderList();
-            updateListDisplay();
-            document.getElementById('new-list-name').value = '';
-        }
-
-        function switchList(id) {
-            appState.activeListId = id;
-            saveToStorage();
-            renderList();
-            updateListDisplay();
-            toggleListsMenu();
-        }
-
-        function renderListsMenu() {
-            const container = document.getElementById('lists-container');
-            container.innerHTML = '';
-            Object.keys(appState.lists).sort((a,b) => appState.lists[b].createdAt - appState.lists[a].createdAt).forEach(id => {
-                const list = appState.lists[id];
-                const active = id === appState.activeListId;
-                const el = document.createElement('div');
-                el.className = `p-4 rounded-3xl cursor-pointer flex justify-between items-center border-2 transition ${active ? 'bg-pink-500/10 border-pink-500' : 'bg-gray-900 border-transparent'}`;
+                el.className = `p-4 rounded-3xl cursor-pointer flex justify-between items-center border-2 transition ${active ? 'bg-pink-500/10 border-pink-500' : 'bg-gray-900 border-transparent hover:bg-gray-800'}`;
                 el.onclick = () => switchList(id);
                 el.innerHTML = `
                     <div class="font-bold ${active ? 'text-white' : 'text-gray-400'}">${list.name}</div>
@@ -939,25 +481,25 @@
         }
 
         function updateListDisplay() {
-            document.getElementById('current-list-display').textContent = appState.lists[appState.activeListId]?.name || "Select List";
+            document.getElementById('current-list-display').textContent = appState.lists[appState.activeListId]?.name || "Nenhuma lista";
         }
 
         function showFeedback(msg) {
             const f = document.getElementById('feedback');
             document.getElementById('feedback-text').textContent = msg;
             f.classList.remove('hidden');
-            setTimeout(() => f.classList.add('hidden'), 2000);
+            setTimeout(() => f.classList.add('hidden'), 3000);
         }
 
         function exportData() {
             const items = appState.lists[appState.activeListId]?.items;
-            if (!items || !Object.keys(items).length) return showErrorDialog("Empty List", "Nothing to share yet.");
-            const csv = "Barcode,Qty\n" + Object.entries(items).map(e => e.join(',')).join('\n');
+            if (!items || !Object.keys(items).length) return showErrorDialog("Lista Vazia", "Não há itens para exportar.");
+            const csv = "Código,Quantidade\n" + Object.entries(items).map(e => e.join(',')).join('\n');
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `ScannerExport_${appState.activeListId}.csv`;
+            a.download = `Export_${appState.lists[appState.activeListId].name}_${new Date().toLocaleDateString()}.csv`;
             a.click();
         }
 
@@ -974,7 +516,7 @@
                 appState = JSON.parse(data);
             } else {
                 const id = Date.now().toString();
-                appState = { lists: { [id]: { name: "Default List", items: {}, createdAt: Date.now() } }, activeListId: id };
+                appState = { lists: { [id]: { name: "Lista Principal", items: {}, createdAt: Date.now() } }, activeListId: id };
             }
         }
     </script>
